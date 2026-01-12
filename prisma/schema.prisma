@@ -1,0 +1,127 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- ENUMS (Optimized for performance) ---
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum CardStatus {
+  ACTIVE
+  INACTIVE
+  LOST
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+  GRACE_PERIOD
+}
+
+enum PlanType {
+  PERSONAL
+  GROUP
+  COMPANY
+}
+
+// --- MODELS ---
+
+model User {
+  id             String    @id @default(cuid())
+  fullName       String
+  email          String    @unique
+  secondaryEmail String?
+  password       String    // Remember to hash this!
+  
+  companyName    String?
+  companyWebsite String?
+  avatarUrl      String?
+  bio            String?   @db.Text
+  
+  role           Role      @default(USER)
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  socialLinks    SocialLink[]
+  cards          Card[]            @relation("OwnedCards")
+  
+  // Scans I have made (Scanning History)
+  scansMade      Scan[]            @relation("ScansMade")
+  
+  // My active subscription
+  subscription   Subscription?
+}
+
+model SocialLink {
+  id           String   @id @default(cuid())
+  platform     String   // e.g., "Whatsapp", "LinkedIn"
+  url          String
+  
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Card {
+  id             String      @id @default(cuid())
+  slug           String      @unique
+  hardwareSerial String      @unique
+  
+  status         CardStatus  @default(INACTIVE)
+  
+  userId         String
+  user           User        @relation("OwnedCards", fields: [userId], references: [id])
+  
+  // History of people who scanned THIS card (User Scanned History)
+  scansReceived  Scan[]
+  
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model Scan {
+  id         String   @id @default(cuid())
+  
+  // The person scanning (Who scanned?)
+  scannerId  String
+  scanner    User     @relation("ScansMade", fields: [scannerId], references: [id])
+  
+  // The card being scanned (Who was scanned?)
+  cardId     String
+  card       Card     @relation(fields: [cardId], references: [id])
+  
+  scannedAt  DateTime @default(now())
+
+  @@index([scannerId])
+  @@index([cardId])
+}
+
+model Subscription {
+  id             String             @id @default(cuid())
+  
+  userId         String             @unique // One sub per user
+  user           User               @relation(fields: [userId], references: [id])
+  
+  status         SubscriptionStatus @default(ACTIVE)
+  planType       PlanType           // PERSONAL, GROUP, COMPANY
+  
+  startDate      DateTime           @default(now())
+  endDate        DateTime
+  
+  paymentRef     String?            // For Stripe/Midtrans ID
+  
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
