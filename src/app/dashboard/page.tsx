@@ -1,17 +1,11 @@
-// app/dashboard/profile/page.tsx (Server Component Example)
-import { prisma } from '@/lib/prisma'
-import { verifySession } from '@/lib/session'
-
-async function getProfile() {
-    const session = await verifySession()
-    if (!session) return null
-
-    const user = await prisma.user.findUnique({
-        where: { id: session.userId },
-        include: {
-            socialLinks: true // Fetch the socials too
-        }
-    })
-    
-    return user
+// File: app/dashboard/page.tsx
+export default function DashboardPage() {
+    return (
+        <div>
+            <h1 className="text-2xl font-bold mb-4">Dashboard Overview</h1>
+            <div className="p-6 bg-white rounded-lg shadow-sm border border-gray-100">
+                <p className="text-gray-600">Welcome back! Here is your account summary.</p>
+            </div>
+        </div>
+    )
 }

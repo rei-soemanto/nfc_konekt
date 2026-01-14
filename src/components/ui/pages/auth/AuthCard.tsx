@@ -10,15 +10,8 @@ function SignUpForm({ isActive }: { isActive: boolean }) {
     const [state, action] = useActionState(signup, undefined)
 
     return (
-        <div className={`absolute top-0 h-full transition-all duration-500 ease-in-out left-0 w-1/2 flex items-center justify-center ${
-            isActive 
-                ? 'opacity-100 z-50 translate-x-[100%]'  // Move to RIGHT side when active
-                : 'opacity-0 z-10 translate-x-0'          // Hide on LEFT side when inactive
-        }`}>
-            <form 
-                action={action} 
-                className="bg-white flex flex-col items-center justify-center w-full h-full px-10 text-center"
-            >
+        <div className={`absolute top-0 h-full transition-all duration-500 ease-in-out left-0 w-1/2 flex items-center justify-center ${isActive ? 'opacity-100 z-50 translate-x-[100%]' : 'opacity-0 z-10 translate-x-0'}`}>
+            <form action={action} className="bg-white flex flex-col items-center justify-center w-full h-full px-10 text-center">
                 <h1 className="text-3xl font-bold mb-4 text-gray-800">Create Account</h1>
                 <div className="w-full space-y-3 text-left">
                     {state?.message && (
