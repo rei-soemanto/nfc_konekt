@@ -57,13 +57,31 @@ model User {
 
   // Relations
   socialLinks    SocialLink[]
-  cards          Card[]            @relation("OwnedCards")
+  cards          Card[]    @relation("OwnedCards")
   
   // Scans I have made (Scanning History)
-  scansMade      Scan[]            @relation("ScansMade")
+  scansMade      Scan[]    @relation("ScansMade")
   
   // My active subscription
   subscription   Subscription?
+
+  // Add these two lines for Friend Relations
+  friendsAsUser   Friend[]  @relation("UserFriends")
+  friendsAsFriend Friend[]  @relation("FriendUsers")
+}
+
+model Friend {
+  id        String   @id @default(cuid())
+  
+  userId    String
+  user      User     @relation("UserFriends", fields: [userId], references: [id])
+  
+  friendId  String
+  friend    User     @relation("FriendUsers", fields: [friendId], references: [id])
+  
+  createdAt DateTime @default(now())
+
+  @@unique([userId, friendId]) // Prevent duplicate friendships
 }
 
 model SocialLink {

@@ -1,51 +1,49 @@
-// File: app/dashboard/layout.tsx
-'use client'
+import { Sidebar } from '@/components/ui/layout/Sidebar'
+import { DashboardFooter } from '@/components/ui/layout/DashboardFooter'
+import { prisma } from '@/lib/prisma'
+import { redirect } from 'next/navigation'
 
-import { ReactNode } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { logout } from '@/actions/auth' // Make sure this path is correct
+// Mock Auth Helper (Replace with your actual auth session later)
+async function getAuthUserId() {
+    const user = await prisma.user.findFirst(); 
+    return user?.id;
+}
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
-    const pathname = usePathname()
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+    const userId = await getAuthUserId();
 
-    const getLinkClass = (path: string) => {
-        const isActive = pathname === path
-        return isActive 
-            ? "block px-4 py-2 text-blue-600 bg-blue-50 font-medium rounded-lg" 
-            : "block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors"
+    if (!userId) {
+        redirect('/auth');
     }
 
-    return (
-        <div className="min-h-screen bg-gray-50 flex">
-            {/* Sidebar */}
-            <aside className="w-64 bg-white border-r border-gray-200 hidden md:block">
-                <div className="p-6 border-b border-gray-100">
-                    <span className="font-bold text-xl text-blue-600">DigiCard</span>
-                </div>
-                <nav className="p-4 space-y-2">
-                    <Link href="/dashboard" className={getLinkClass('/dashboard')}>
-                        Overview
-                    </Link>
-                    <Link href="/dashboard/profile" className={getLinkClass('/dashboard/profile')}>
-                        Profile
-                    </Link>
-                    <Link href="/dashboard/cards" className={getLinkClass('/dashboard/cards')}>
-                        My Cards
-                    </Link>
-                    
-                    <form action={logout} className="pt-4 mt-4 border-t border-gray-100">
-                        <button className="w-full text-left px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm transition-colors">
-                            Sign Out
-                        </button>
-                    </form>
-                </nav>
-            </aside>
+    // Fetch User AND Subscription to get the plan name
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { subscription: true }
+    });
 
-            {/* Dashboard Content Area */}
-            <main className="flex-1 overflow-y-auto p-8">
-                {children}
-            </main>
+    if (!user) {
+        redirect('/auth');
+    }
+
+    // Format data for the Sidebar
+    const sidebarUserData = {
+        fullName: user.fullName,
+        plan: user.subscription?.planType.toLowerCase() || 'free', // Defaults to 'free' if no sub
+        avatarUrl: user.avatarUrl
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex transition-colors duration-300 font-sans">
+            {/* Pass the fetched data to the Client Component */}
+            <Sidebar user={sidebarUserData} />
+
+            <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+                <main className="flex-1 overflow-y-auto p-4 md:p-8">
+                    {children}
+                </main>
+                <DashboardFooter />
+            </div>
         </div>
     )
 }
