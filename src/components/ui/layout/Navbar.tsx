@@ -92,7 +92,8 @@ export function Navbar() {
                 <div className="flex justify-between items-center transition-all duration-300"> 
                     {/* Logo */}
                     <div className="flex-shrink-0 flex items-center">
-                        <Link href="/" className="text-2xl font-bold text-blue-600 dark:text-blue-500 transition-all duration-300">
+                        <Link href="/" className="text-2xl font-bold text-indigo-600 dark:text-indigo-500 transition-all duration-300">
+                            <i className="fa-solid fa-wifi mr-2"></i>
                             NFC Konekt
                         </Link>
                     </div>
@@ -110,14 +111,14 @@ export function Navbar() {
                                     onClick={(e) => handleNavClick(e, link.href)}
                                     className={`relative px-4 py-2 rounded-sm transition-all duration-300 ${
                                         isActive 
-                                            ? 'bg-blue-50 dark:bg-gray-800' 
+                                            ? 'bg-indigo-50 dark:bg-gray-800' 
                                             : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                                     }`}
                                 >
                                     <span className={`font-medium transition-colors duration-300 ${
                                         isActive 
-                                            ? 'text-blue-600 dark:text-blue-400' 
-                                            : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
+                                            ? 'text-indigo-600 dark:text-indigo-400' 
+                                            : 'text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400'
                                     }`}>
                                         {link.name}
                                     </span>
@@ -127,7 +128,7 @@ export function Navbar() {
                         
                         {/* Sliding Underline */}
                         <span 
-                            className="absolute bottom-0 h-1 bg-blue-600 dark:bg-blue-400 transition-all duration-300 ease-out rounded-full"
+                            className="absolute bottom-0 h-1 bg-indigo-600 dark:bg-indigo-400 transition-all duration-300 ease-out rounded-full"
                             style={{ 
                                 left: `${sliderStyle.left}px`, 
                                 width: `${sliderStyle.width}px`, 
@@ -138,10 +139,10 @@ export function Navbar() {
                         <div className="pl-4">
                             <Link 
                                 href="/auth" 
-                                className={`font-medium rounded-full hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 transition-all shadow-md shadow-blue-200 dark:shadow-none hover:shadow-lg ${
+                                className={`font-medium rounded-full hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-md shadow-indigo-200 dark:shadow-none hover:shadow-lg ${
                                     isScrolled 
-                                        ? 'px-6 py-2.5 bg-blue-600 text-white text-sm'  // Compact Button
-                                        : 'px-8 py-3 bg-blue-600 text-white text-base'   // Larger Button at Top
+                                        ? 'px-6 py-2.5 bg-indigo-600 text-white text-sm'  // Compact Button
+                                        : 'px-8 py-3 bg-indigo-600 text-white text-base'   // Larger Button at Top
                                 }`}
                             >
                                 Login

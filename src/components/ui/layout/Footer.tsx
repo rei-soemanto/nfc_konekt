@@ -15,7 +15,7 @@ export function Footer() {
                         
                         <div className="space-y-4 pt-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-blue-900/50 flex items-center justify-center text-blue-400">📍</div>
+                                <div className="w-10 h-10 rounded-full bg-indigo-900/50 flex items-center justify-center text-indigo-400">📍</div>
                                 <div>
                                     <p className="text-sm text-gray-400">Visit Us</p>
                                     <p className="font-medium">Surabaya, East Java, Indonesia</p>
@@ -23,7 +23,7 @@ export function Footer() {
                             </div>
                             
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-blue-900/50 flex items-center justify-center text-blue-400">📧</div>
+                                <div className="w-10 h-10 rounded-full bg-indigo-900/50 flex items-center justify-center text-indigo-400">📧</div>
                                 <div>
                                     <p className="text-sm text-gray-400">Email Us</p>
                                     <p className="font-medium">nfckonekt@gmail.com</p>
@@ -44,11 +44,11 @@ export function Footer() {
                                 <label className="text-sm font-medium text-gray-300 mb-1 block">Message</label>
                                 <textarea 
                                     rows={4} 
-                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none"
                                     placeholder="How can we help?"
                                 />
                             </div>
-                            <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-lg transition-colors">
+                            <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-lg transition-colors">
                                 Send Message
                             </button>
                         </form>

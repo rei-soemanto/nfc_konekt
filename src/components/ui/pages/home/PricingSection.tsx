@@ -19,10 +19,10 @@ export function PricingSection() {
                     {plans.map((plan, i) => (
                         <div key={i} className={`p-8 rounded-2xl border ${
                             i === 1 
-                                ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 ring-4 ring-blue-100 dark:ring-blue-900/40' 
+                                ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 ring-4 ring-indigo-100 dark:ring-indigo-900/40' 
                                 : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900'
                         }`}>
-                            <h3 className={`text-xl font-bold ${i === 1 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}>
+                            <h3 className={`text-xl font-bold ${i === 1 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-white'}`}>
                                 {plan.name}
                             </h3>
                             <div className="mt-4 mb-6">
@@ -42,7 +42,7 @@ export function PricingSection() {
                                 href="/auth" 
                                 className={`block w-full py-3 px-4 rounded-xl text-center font-semibold transition-colors ${
                                     i === 1 
-                                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                        ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
                                         : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
                                 }`}
                             >

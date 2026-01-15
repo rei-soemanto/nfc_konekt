@@ -11,11 +11,11 @@ function SignUpForm({ isActive }: { isActive: boolean }) {
 
     return (
         <div className={`absolute top-0 h-full transition-all duration-500 ease-in-out left-0 w-1/2 flex items-center justify-center ${isActive ? 'opacity-100 z-50 translate-x-[100%]' : 'opacity-0 z-10 translate-x-0'}`}>
-            <form action={action} className="bg-white flex flex-col items-center justify-center w-full h-full px-10 text-center">
-                <h1 className="text-3xl font-bold mb-4 text-gray-800">Create Account</h1>
+            <form action={action} className="bg-white dark:bg-gray-900 flex flex-col items-center justify-center w-full h-full px-10 text-center transition-colors duration-300">
+                <h1 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">Create Account</h1>
                 <div className="w-full space-y-3 text-left">
                     {state?.message && (
-                        <p className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">{state.message}</p>
+                        <p className="text-red-500 text-sm text-center bg-red-50 dark:bg-red-900/20 p-2 rounded">{state.message}</p>
                     )}
                     
                     <Input name="fullName" label="Name" placeholder="John Doe" error={state?.errors?.fullName} />
@@ -24,7 +24,9 @@ function SignUpForm({ isActive }: { isActive: boolean }) {
                     <Input name="companyName" label="Company" placeholder="Acme Inc" error={state?.errors?.companyName} />
                     
                     <div className="pt-2">
-                        <SubmitButton className="bg-blue-600 hover:bg-blue-700">Sign Up</SubmitButton>
+                        <SubmitButton className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors">
+                            Sign Up
+                        </SubmitButton>
                     </div>
                 </div>
             </form>
@@ -39,24 +41,26 @@ function SignInForm({ isActive }: { isActive: boolean }) {
     return (
         <div className={`absolute top-0 h-full transition-all duration-500 ease-in-out left-0 w-1/2 flex items-center justify-center ${
             isActive 
-                ? 'opacity-0 z-10 translate-x-[100%]'   // Fade out & Move Right (optional)
-                : 'opacity-100 z-20 translate-x-0'       // Show on LEFT side
+                ? 'opacity-0 z-10 translate-x-[100%]'   
+                : 'opacity-100 z-20 translate-x-0'       
         }`}>
             <form 
                 action={action} 
-                className="bg-white flex flex-col items-center justify-center w-full h-full px-10 text-center"
+                className="bg-white dark:bg-gray-900 flex flex-col items-center justify-center w-full h-full px-10 text-center transition-colors duration-300"
             >
-                <h1 className="text-3xl font-bold mb-4 text-gray-800">Sign In</h1>
+                <h1 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">Sign In</h1>
                 <div className="w-full space-y-4 text-left">
                     {state?.message && (
-                        <p className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">{state.message}</p>
+                        <p className="text-red-500 text-sm text-center bg-red-50 dark:bg-red-900/20 p-2 rounded">{state.message}</p>
                     )}
 
                     <Input name="email" label="Email" type="email" placeholder="john@example.com" error={state?.errors?.email} />
                     <Input name="password" label="Password" type="password" placeholder="••••••••" error={state?.errors?.password} />
                     
                     <div className="pt-2">
-                        <SubmitButton className="bg-blue-600 hover:bg-blue-700">Sign In</SubmitButton>
+                        <SubmitButton className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors">
+                            Sign In
+                        </SubmitButton>
                     </div>
                 </div>
             </form>
@@ -70,7 +74,7 @@ function Overlay({ isSignupMode, onToggle }: { isSignupMode: boolean, onToggle: 
         <div className={`absolute top-0 left-1/2 w-1/2 h-full overflow-hidden transition-transform duration-500 ease-in-out z-50 ${
             isSignupMode ? '-translate-x-full' : 'translate-x-0'
         }`}>
-            <div className={`bg-gradient-to-r from-blue-600 to-indigo-600 text-white relative -left-full h-full w-[200%] transform transition-transform duration-500 ease-in-out ${
+            <div className={`bg-gradient-to-r from-indigo-600 to-violet-600 text-white relative -left-full h-full w-[200%] transform transition-transform duration-500 ease-in-out ${
                 isSignupMode ? 'translate-x-1/2' : 'translate-x-0'
             }`}>
                 
@@ -79,10 +83,10 @@ function Overlay({ isSignupMode, onToggle }: { isSignupMode: boolean, onToggle: 
                     isSignupMode ? 'translate-x-[20%]' : 'translate-x-0'
                 }`}>
                     <h1 className="text-3xl font-bold mb-4">New Here?</h1>
-                    <p className="mb-8 text-blue-100">Sign up and discover a great amount of new opportunities!</p>
+                    <p className="mb-8 text-indigo-100">Sign up and discover a great amount of new opportunities!</p>
                     <button 
                         onClick={onToggle}
-                        className="border-2 border-white rounded-full px-10 py-2 font-semibold hover:bg-white hover:text-blue-600 transition-colors"
+                        className="border-2 border-white rounded-full px-10 py-2 font-semibold hover:bg-white hover:text-indigo-600 transition-colors"
                     >
                         Sign Up
                     </button>
@@ -93,10 +97,10 @@ function Overlay({ isSignupMode, onToggle }: { isSignupMode: boolean, onToggle: 
                     isSignupMode ? 'translate-x-0' : '-translate-x-[20%]'
                 }`}>
                     <h1 className="text-3xl font-bold mb-4">Welcome Back!</h1>
-                    <p className="mb-8 text-blue-100">To keep connected with us please login with your personal info.</p>
+                    <p className="mb-8 text-indigo-100">To keep connected with us please login with your personal info.</p>
                     <button 
                         onClick={onToggle}
-                        className="border-2 border-white rounded-full px-10 py-2 font-semibold hover:bg-white hover:text-blue-600 transition-colors"
+                        className="border-2 border-white rounded-full px-10 py-2 font-semibold hover:bg-white hover:text-indigo-600 transition-colors"
                     >
                         Sign In
                     </button>
@@ -111,13 +115,13 @@ export default function AuthCard() {
     const [isSignupMode, setIsSignupMode] = useState(false)
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-            <div className="relative overflow-hidden w-full max-w-[850px] min-h-[550px] bg-white rounded-2xl shadow-2xl">
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-950 px-4 transition-colors duration-300">
+            <div className="relative overflow-hidden w-full max-w-[850px] min-h-[550px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl dark:shadow-indigo-900/20">
                 
-                {/* 1. Sign Up Form (Now moves to Right when active) */}
+                {/* 1. Sign Up Form */}
                 <SignUpForm isActive={isSignupMode} />
 
-                {/* 2. Sign In Form (Fades out when inactive) */}
+                {/* 2. Sign In Form */}
                 <SignInForm isActive={isSignupMode} />
 
                 {/* 3. The Sliding Overlay */}
