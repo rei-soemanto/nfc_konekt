@@ -1,19 +1,21 @@
 import { prisma } from '@/lib/prisma'
+import { getAuthUserId } from '@/lib/auth' // Import real auth
 import PublicProfile from '@/components/ui/pages/public/PublicProfile'
 import { notFound } from 'next/navigation'
 
-// 1. Update the type to be a Promise
 type Props = {
     params: Promise<{ slug: string }>
 }
 
 export default async function CardProfilePage({ params }: Props) {
-    // 2. Await the params before accessing slug
     const { slug } = await params;
+    
+    // 1. Get the Current Viewer (Scanner)
+    const viewerId = await getAuthUserId();
 
-    // Fetch card and related user info
+    // 2. Fetch Card Owner Data
     const card = await prisma.card.findUnique({
-        where: { slug: slug }, // Now slug is a valid string, not undefined
+        where: { slug: slug },
         include: {
             user: {
                 include: {
@@ -23,8 +25,21 @@ export default async function CardProfilePage({ params }: Props) {
         }
     });
 
-    if (!card) {
-        return notFound();
+    if (!card) return notFound();
+
+    // 3. Status Checks
+    const isOwner = viewerId === card.user.id;
+    let isFriend = false;
+
+    // 4. Check if they are already friends (only if logged in and not owner)
+    if (viewerId && !isOwner) {
+        const friendRecord = await prisma.friend.findFirst({
+            where: {
+                userId: viewerId,
+                friendId: card.user.id
+            }
+        });
+        isFriend = !!friendRecord;
     }
 
     const userData = {
@@ -37,5 +52,14 @@ export default async function CardProfilePage({ params }: Props) {
         socialLinks: card.user.socialLinks
     };
 
-    return <PublicProfile user={userData} slug={slug} />
+    // Pass the new status flags to the component
+    return (
+        <PublicProfile 
+            user={userData} 
+            slug={slug} 
+            isOwner={isOwner} 
+            initialIsFriend={isFriend}
+            viewerId={viewerId} // Pass null if anonymous
+        />
+    )
 }

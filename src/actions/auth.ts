@@ -1,108 +1,134 @@
 'use server'
 
-import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import bcrypt from 'bcryptjs'
-import { createSession, deleteSession } from '@/lib/session'
+import { SignJWT } from 'jose'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import bcrypt from 'bcryptjs' // Ensure you have installed: npm install bcryptjs @types/bcryptjs
 
-// 1. Validation Schema (Zod)
-// Think of this as Laravel's $request->validate()
-const SignupSchema = z.object({
-    fullName: z.string().min(2),
-    email: z.string().email(),
-    password: z.string().min(8),
-    companyName: z.string().optional()
-})
-
-const LoginSchema = z.object({
-    email: z.string().email(),
-    password: z.string()
-})
-
-// --- REGISTER ACTION ---
-export async function signup(prevState: any, formData: FormData) {
-    // 1. Validate Input
-    const validatedFields = SignupSchema.safeParse({
-        fullName: formData.get('fullName'),
-        email: formData.get('email'),
-        password: formData.get('password'),
-        companyName: formData.get('companyName'),
-    })
-
-    if (!validatedFields.success) {
-        return { errors: validatedFields.error.flatten().fieldErrors }
+export type AuthState = {
+    message?: string
+    errors?: {
+        fullName?: string[]
+        email?: string[]
+        password?: string[]
+        companyName?: string[]
     }
+} | undefined
 
-    const { fullName, email, password, companyName } = validatedFields.data
+// --- 1. LOGIN ACTION ---
+export async function login(prevState: AuthState, formData: FormData): Promise<AuthState> {
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
 
-    // 2. Check if Email Exists
-    const existingUser = await prisma.user.findUnique({
-        where: { email }
-    })
-
-    if (existingUser) {
-        return { errors: { email: ['Email already in use.'] } }
+    if (!email || !password) {
+        return { message: "Please enter both email and password." }
     }
-
-    // 3. Hash Password & Create User
-    const hashedPassword = await bcrypt.hash(password, 10)
 
     try {
+        const user = await prisma.user.findUnique({ where: { email } })
+        
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return { message: "Invalid email or password." }
+        }
+
+        // Create Session Token
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET_KEY)
+        const token = await new SignJWT({ userId: user.id, role: user.role })
+            .setProtectedHeader({ alg: 'HS256' })
+            .setExpirationTime('7d')
+            .sign(secret)
+
+        const cookieStore = await cookies()
+        cookieStore.set('session_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 24 * 7 // 7 days
+        })
+
+    } catch (error) {
+        console.error("Login Error:", error)
+        return { message: "Something went wrong. Please try again." }
+    }
+
+    redirect('/dashboard')
+}
+
+// --- 2. SIGNUP ACTION ---
+export async function signup(prevState: AuthState, formData: FormData): Promise<AuthState> {
+    const fullName = formData.get('fullName') as string
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+    const companyName = formData.get('companyName') as string
+
+    if (!fullName || !email || !password) {
+        return { 
+            message: "Missing required fields.",
+            errors: {
+                fullName: !fullName ? ["Name is required"] : [],
+                email: !email ? ["Email is required"] : [],
+                password: !password ? ["Password is required"] : []
+            }
+        }
+    }
+
+    try {
+        const existingUser = await prisma.user.findUnique({ where: { email } })
+        if (existingUser) {
+            return { 
+                message: "User already exists.",
+                errors: { email: ["This email is already registered."] } 
+            }
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10)
+
+        // Create User & Default Card
         const newUser = await prisma.user.create({
             data: {
                 fullName,
                 email,
                 password: hashedPassword,
-                companyName
+                companyName: companyName || null,
+                role: 'USER',
+                cards: {
+                    create: {
+                        slug: fullName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000),
+                        status: 'ACTIVE'
+                    }
+                }
             }
         })
 
-        // 4. Create Session
-        await createSession(newUser.id, newUser.role)
+        // Auto Login
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET_KEY)
+        const token = await new SignJWT({ userId: newUser.id, role: newUser.role })
+            .setProtectedHeader({ alg: 'HS256' })
+            .setExpirationTime('7d')
+            .sign(secret)
+
+        const cookieStore = await cookies()
+        cookieStore.set('session_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 24 * 7
+        })
+
     } catch (error) {
-        return { message: 'Database Error: Failed to create user.' }
+        console.error("Signup Error:", error)
+        return { message: "Failed to create account." }
     }
 
     redirect('/dashboard')
 }
 
-// --- LOGIN ACTION ---
-export async function login(prevState: any, formData: FormData) {
-    // 1. Validate Input
-    const validatedFields = LoginSchema.safeParse(Object.fromEntries(formData))
-
-    if (!validatedFields.success) {
-        return { errors: validatedFields.error.flatten().fieldErrors }
-    }
-
-    const { email, password } = validatedFields.data
-
-    // 2. Find User
-    const user = await prisma.user.findUnique({
-        where: { email }
-    })
-
-    if (!user) {
-        // Security: Don't reveal if user exists or not specifically
-        return { message: 'Invalid credentials' } 
-    }
-
-    // 3. Compare Password
-    const isMatch = await bcrypt.compare(password, user.password)
-
-    if (!isMatch) {
-        return { message: 'Invalid credentials' }
-    }
-
-    // 4. Create Session
-    await createSession(user.id, user.role)
-    
-    redirect('/dashboard')
-}
-
-// --- LOGOUT ACTION ---
+// --- 3. LOGOUT ACTION ---
 export async function logout() {
-    await deleteSession()
-    redirect('/login')
+    const cookieStore = await cookies()
+    cookieStore.delete('session_token')
+    redirect('/') // or redirect('/auth') depending on your route
 }

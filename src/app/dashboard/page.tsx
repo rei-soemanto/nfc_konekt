@@ -1,13 +1,8 @@
 import { prisma } from '@/lib/prisma'
+import { getAuthUserId } from '@/lib/auth'
 import StatsGrid from '@/components/ui/pages/dashboard/StatsGrid'
 import RecentActivity from '@/components/ui/pages/dashboard/RecentActivity'
 import { redirect } from 'next/navigation'
-
-// Helper for Mock Auth
-async function getAuthUserId() {
-    const user = await prisma.user.findFirst();
-    return user?.id;
-}
 
 // Helper for relative time
 function timeAgo(date: Date) {
@@ -28,7 +23,10 @@ function timeAgo(date: Date) {
 
 export default async function DashboardPage() {
     const userId = await getAuthUserId();
-    if (!userId) redirect('/auth');
+
+    if (!userId) {
+        redirect('/auth'); // Redirect to real login page
+    }
 
     // --- 1. Fetch Raw Data Parallelly ---
     const [

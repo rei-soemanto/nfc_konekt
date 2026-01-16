@@ -36,6 +36,11 @@ enum PlanType {
   COMPANY
 }
 
+enum FriendStatus {
+  PENDING
+  ACCEPTED
+}
+
 // --- MODELS ---
 
 model User {
@@ -71,17 +76,19 @@ model User {
 }
 
 model Friend {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   
   userId    String
-  user      User     @relation("UserFriends", fields: [userId], references: [id])
+  user      User         @relation("UserFriends", fields: [userId], references: [id])
   
   friendId  String
-  friend    User     @relation("FriendUsers", fields: [friendId], references: [id])
+  friend    User         @relation("FriendUsers", fields: [friendId], references: [id])
   
-  createdAt DateTime @default(now())
+  status    FriendStatus @default(PENDING)
+  
+  createdAt DateTime     @default(now())
 
-  @@unique([userId, friendId]) // Prevent duplicate friendships
+  @@unique([userId, friendId])
 }
 
 model SocialLink {
@@ -96,7 +103,7 @@ model SocialLink {
 model Card {
   id             String      @id @default(cuid())
   slug           String      @unique
-  hardwareSerial String      @unique
+  hardwareSerial String?     @unique
   
   status         CardStatus  @default(INACTIVE)
   

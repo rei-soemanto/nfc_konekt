@@ -1,18 +1,13 @@
 import { prisma } from '@/lib/prisma'
 import SubscriptionPlans from '@/components/ui/pages/dashboard/SubscriptionPlans'
 import { redirect } from 'next/navigation'
-
-// Helper for Auth (Replace with your actual session)
-async function getAuthUserId() {
-    const user = await prisma.user.findFirst();
-    return user?.id;
-}
+import { getAuthUserId } from '@/lib/auth';
 
 export default async function PaymentPage() {
     const userId = await getAuthUserId();
-    
+
     if (!userId) {
-        redirect('/auth');
+        redirect('/auth/login'); // Redirect to real login page
     }
 
     return (

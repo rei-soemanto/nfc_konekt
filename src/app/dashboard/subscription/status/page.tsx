@@ -1,15 +1,14 @@
 import { prisma } from '@/lib/prisma'
 import SubscriptionInfo from '@/components/ui/pages/dashboard/SubscriptionInfo'
 import { redirect } from 'next/navigation'
-
-async function getAuthUserId() {
-    const user = await prisma.user.findFirst();
-    return user?.id;
-}
+import { getAuthUserId } from '@/lib/auth';
 
 export default async function SubscriptionStatusPage() {
     const userId = await getAuthUserId();
-    if (!userId) redirect('/auth');
+
+    if (!userId) {
+        redirect('/auth/login'); // Redirect to real login page
+    }
 
     // Fetch User Subscription
     const user = await prisma.user.findUnique({

@@ -14,15 +14,29 @@ type UserProfile = {
     socialLinks: { platform: string; url: string }[]
 }
 
-export default function PublicProfile({ user, slug }: { user: UserProfile, slug: string }) {
-    const [isFriend, setIsFriend] = useState(false);
+export default function PublicProfile({ 
+    user, 
+    slug, 
+    isOwner, 
+    initialIsFriend,
+    viewerId
+}: { 
+    user: UserProfile, 
+    slug: string,
+    isOwner: boolean,
+    initialIsFriend: boolean,
+    viewerId: string | null
+}) {
+    const [isFriend, setIsFriend] = useState(initialIsFriend);
+    const [loading, setLoading] = useState(false);
 
-    // 1. Log the scan on mount
+    // Only log scan if it's NOT the owner
     useEffect(() => {
-        logScan(slug);
-    }, [slug]);
+        if (!isOwner) {
+            logScan(slug);
+        }
+    }, [slug, isOwner]);
 
-    // 2. Handle "Save Contact" (VCF Download)
     const handleDownloadVCard = () => {
         const vcardData = generateVCard(user);
         const blob = new Blob([vcardData], { type: 'text/vcard' });
@@ -35,19 +49,39 @@ export default function PublicProfile({ user, slug }: { user: UserProfile, slug:
         document.body.removeChild(link);
     };
 
-    // 3. Handle "Connect"
     const handleConnect = async () => {
+        if (!viewerId) {
+            // Redirect to login if anonymous
+            window.location.href = `/auth?redirect=/p/${slug}`;
+            return;
+        }
+
+        setLoading(true);
         const result = await addFriend(user.id);
-        if (result.success) setIsFriend(true);
-        else alert("Could not add friend (Maybe not logged in?)");
+        setLoading(false);
+
+        if (result.success) {
+            setIsFriend(true);
+        } else {
+            alert(result.error);
+        }
     };
 
     return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-            <div className="w-full max-w-md bg-gray-800 rounded-3xl overflow-hidden shadow-2xl border border-gray-700">
+            <div className="w-full max-w-md bg-gray-800 rounded-3xl overflow-hidden shadow-2xl border border-gray-700 relative">
                 
                 {/* Header Banner */}
                 <div className="h-32 bg-gradient-to-r from-indigo-600 to-violet-600 relative">
+                    {/* OWNER BADGE - Visual feedback */}
+                    {isOwner && (
+                        <div className="absolute top-4 right-4 bg-black/30 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">
+                            <span className="text-xs font-bold text-white flex items-center">
+                                <i className="fa-solid fa-eye mr-2"></i> Preview Mode
+                            </span>
+                        </div>
+                    )}
+
                     <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                         <div className="h-24 w-24 rounded-full border-4 border-gray-800 bg-gray-700 flex items-center justify-center overflow-hidden">
                             {user.avatarUrl ? (
@@ -59,18 +93,14 @@ export default function PublicProfile({ user, slug }: { user: UserProfile, slug:
                     </div>
                 </div>
 
-                {/* Profile Info */}
                 <div className="pt-16 pb-8 px-8 text-center">
                     <h1 className="text-2xl font-bold text-white mb-1">{user.fullName}</h1>
                     <p className="text-indigo-400 font-medium mb-4">{user.companyName}</p>
                     
                     {user.bio && (
-                        <p className="text-gray-400 text-sm mb-8 leading-relaxed">
-                            "{user.bio}"
-                        </p>
+                        <p className="text-gray-400 text-sm mb-8 leading-relaxed">"{user.bio}"</p>
                     )}
 
-                    {/* Action Buttons */}
                     <div className="grid grid-cols-2 gap-4 mb-8">
                         <button 
                             onClick={handleDownloadVCard}
@@ -79,16 +109,23 @@ export default function PublicProfile({ user, slug }: { user: UserProfile, slug:
                             <i className="fa-solid fa-address-book mr-2"></i>
                             Save Contact
                         </button>
+                        
                         <button 
                             onClick={handleConnect}
-                            disabled={isFriend}
+                            disabled={isFriend || isOwner || loading}
                             className={`py-3 rounded-xl font-bold text-sm transition-colors shadow-lg flex items-center justify-center ${
-                                isFriend 
-                                    ? 'bg-green-600 text-white cursor-default' 
-                                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                isOwner 
+                                    ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' 
+                                    : isFriend 
+                                        ? 'bg-green-600 text-white cursor-default' 
+                                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
                             }`}
                         >
-                            {isFriend ? (
+                            {loading ? (
+                                <i className="fa-solid fa-circle-notch fa-spin"></i>
+                            ) : isOwner ? (
+                                <><i className="fa-solid fa-user mr-2"></i> It's You</>
+                            ) : isFriend ? (
                                 <><i className="fa-solid fa-check mr-2"></i> Connected</>
                             ) : (
                                 <><i className="fa-solid fa-user-plus mr-2"></i> Connect</>
@@ -96,33 +133,14 @@ export default function PublicProfile({ user, slug }: { user: UserProfile, slug:
                         </button>
                     </div>
 
-                    {/* Social Links */}
+                    {/* Social Links... (Keep existing code) */}
                     <div className="space-y-3">
-                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Social Profiles</h3>
                         {user.socialLinks.map((link, idx) => (
-                            <a 
-                                key={idx}
-                                href={link.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center p-4 bg-gray-700/50 rounded-xl hover:bg-gray-700 transition-all border border-gray-700 hover:border-indigo-500/50 group"
-                            >
-                                <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-indigo-400 group-hover:text-white group-hover:bg-indigo-600 transition-colors">
-                                    {/* Simple mapping for icons based on platform name */}
-                                    <i className={`fa-brands fa-${link.platform.toLowerCase()} text-lg`}></i>
-                                </div>
-                                <span className="ml-4 text-gray-300 font-medium group-hover:text-white">{link.platform}</span>
-                                <i className="fa-solid fa-arrow-up-right-from-square ml-auto text-gray-500 text-sm"></i>
+                            <a key={idx} href={link.url} target="_blank" className="flex items-center p-4 bg-gray-700/50 rounded-xl hover:bg-gray-700 transition-all border border-gray-700 hover:border-indigo-500/50 group">
+                                <span className="text-gray-300 font-medium">{link.platform}</span>
                             </a>
                         ))}
                     </div>
-                </div>
-
-                {/* Footer */}
-                <div className="bg-gray-900 py-4 text-center border-t border-gray-800">
-                    <p className="text-xs text-gray-600 flex items-center justify-center">
-                        <i className="fa-solid fa-wifi mr-2"></i> Powered by NFC Konekt
-                    </p>
                 </div>
             </div>
         </div>
