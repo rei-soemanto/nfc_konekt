@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Input } from '@/components/common/Input'
 
 type SocialLink = {
@@ -16,22 +16,24 @@ interface SocialLinksEditorProps {
 export function SocialLinksEditor({ initialData = [], onChange }: SocialLinksEditorProps) {
     const [links, setLinks] = useState<SocialLink[]>(initialData)
 
-    useEffect(() => {
-        onChange(links)
-    }, [links, onChange])
+    // Helper to notify parent component immediately
+    const updateParent = (newLinks: SocialLink[]) => {
+        setLinks(newLinks)
+        onChange(newLinks)
+    }
 
     const addLink = () => {
-        setLinks([...links, { platform: 'Whatsapp', url: '' }])
+        updateParent([...links, { platform: 'Whatsapp', url: '' }])
     }
 
     const removeLink = (index: number) => {
-        setLinks(links.filter((_, i) => i !== index))
+        updateParent(links.filter((_, i) => i !== index))
     }
 
     const updateLink = (index: number, field: keyof SocialLink, value: string) => {
         const newLinks = [...links]
         newLinks[index] = { ...newLinks[index], [field]: value }
-        setLinks(newLinks)
+        updateParent(newLinks)
     }
 
     return (
@@ -63,6 +65,8 @@ export function SocialLinksEditor({ initialData = [], onChange }: SocialLinksEdi
                                 <option value="Github">Github</option>
                                 <option value="Twitter">Twitter</option>
                                 <option value="Website">Website</option>
+                                <option value="Facebook">Facebook</option>
+                                <option value="YouTube">YouTube</option>
                             </select>
                             <i className="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
                         </div>

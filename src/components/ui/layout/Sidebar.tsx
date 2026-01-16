@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logout } from '@/actions/auth'
 
-// Define the shape of the User prop
+// 1. Update UserProps to include 'role'
 type UserProps = {
     fullName: string
     plan: string
     avatarUrl: string | null
+    role: string
 }
 
 type NavItem = {
@@ -18,10 +19,10 @@ type NavItem = {
     children?: { name: string; href: string; icon: string }[]
 }
 
-// Accept user data as a prop
 export function Sidebar({ user }: { user: UserProps }) {
     const pathname = usePathname()
 
+    // 2. Base Navigation
     const navItems: NavItem[] = [
         { name: 'Dashboard', href: '/dashboard', icon: 'fa-chart-line' },
         { name: 'History', href: '/dashboard/history', icon: 'fa-clock-rotate-left' },
@@ -38,6 +39,15 @@ export function Sidebar({ user }: { user: UserProps }) {
         { name: 'Account', href: '/dashboard/account', icon: 'fa-user-gear' },
     ]
 
+    // 3. CONDITIONALLY ADD ADMIN LINK
+    if (user.role === 'ADMIN') {
+        navItems.push({
+            name: 'NFC Writer',
+            href: '/dashboard/admin/writer',
+            icon: 'fa-wand-magic-sparkles' 
+        })
+    }
+
     return (
         <aside className="hidden md:flex flex-col w-64 h-screen sticky top-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-colors duration-300 z-40">
             {/* Header */}
@@ -51,12 +61,10 @@ export function Sidebar({ user }: { user: UserProps }) {
             {/* Navigation */}
             <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
                 {navItems.map((item) => {
-                    // Check if parent or any child is active
                     const isActive = pathname === item.href || item.children?.some(child => pathname === child.href)
                     
                     return (
                         <div key={item.name} className="relative group">
-                            {/* Main Link */}
                             <Link 
                                 href={item.href}
                                 className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
@@ -70,13 +78,12 @@ export function Sidebar({ user }: { user: UserProps }) {
                                 }`}></i>
                                 {item.name}
                                 
-                                {/* Arrow indicator for dropdowns */}
                                 {item.children && (
                                     <i className="fa-solid fa-chevron-down ml-auto text-xs opacity-50 group-hover:rotate-180 transition-transform duration-200"></i>
                                 )}
                             </Link>
 
-                            {/* Dropdown Menu (Visible on Hover) */}
+                            {/* Dropdown Menu */}
                             {item.children && (
                                 <div className="hidden group-hover:block pl-9 mt-1 space-y-1 animation-fade-in">
                                     {item.children.map((child) => {
@@ -115,7 +122,11 @@ export function Sidebar({ user }: { user: UserProps }) {
                     </div>
                     <div className="ml-3 overflow-hidden">
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{user.fullName}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate capitalize">{user.plan}</p>
+                        
+                        {/* 4. Display 'Eternal' for Lifetime plans */}
+                        <p className={`text-xs truncate capitalize ${user.plan === 'lifetime' ? 'text-amber-500 font-bold' : 'text-gray-500 dark:text-gray-400'}`}>
+                            {user.plan === 'lifetime' ? '✨ Eternal' : user.plan}
+                        </p>
                     </div>
                 </div>
                 

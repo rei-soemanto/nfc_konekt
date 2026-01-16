@@ -7,7 +7,7 @@ export default async function AccountPage() {
     const userId = await getAuthUserId();
 
     if (!userId) {
-        redirect('/auth/login'); // Redirect to real login page
+        redirect('/auth');
     }
 
     // 1. Fetch Real Data
@@ -22,8 +22,7 @@ export default async function AccountPage() {
         redirect('/auth');
     }
 
-    // 2. Format Data for the Component
-    // We map the database shape to the shape expected by ProfileForm
+    // 2. Format Data
     const userData = {
         fullName: user.fullName,
         email: user.email,

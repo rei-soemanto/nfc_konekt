@@ -1,5 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// prisma/schema.prisma
 
 datasource db {
   provider = "mysql"
@@ -10,7 +9,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// --- ENUMS (Optimized for performance) ---
+// --- ENUMS ---
 
 enum Role {
   USER
@@ -34,6 +33,7 @@ enum PlanType {
   PERSONAL
   GROUP
   COMPANY
+  LIFETIME
 }
 
 enum FriendStatus {
@@ -48,11 +48,10 @@ model User {
   fullName       String
   email          String    @unique
   secondaryEmail String?
-  password       String    // Remember to hash this!
-  
+  password       String
   companyName    String?
   companyWebsite String?
-  avatarUrl      String?
+  avatarUrl      String?   @db.Text
   bio            String?   @db.Text
   
   role           Role      @default(USER)
@@ -70,7 +69,7 @@ model User {
   // My active subscription
   subscription   Subscription?
 
-  // Add these two lines for Friend Relations
+  // Friend Relations
   friendsAsUser   Friend[]  @relation("UserFriends")
   friendsAsFriend Friend[]  @relation("FriendUsers")
 }
@@ -110,7 +109,6 @@ model Card {
   userId         String
   user           User        @relation("OwnedCards", fields: [userId], references: [id])
   
-  // History of people who scanned THIS card (User Scanned History)
   scansReceived  Scan[]
   
   createdAt      DateTime    @default(now())
@@ -120,11 +118,9 @@ model Card {
 model Scan {
   id         String   @id @default(cuid())
   
-  // The person scanning (Who scanned?)
   scannerId  String
   scanner    User     @relation("ScansMade", fields: [scannerId], references: [id])
   
-  // The card being scanned (Who was scanned?)
   cardId     String
   card       Card     @relation(fields: [cardId], references: [id])
   
@@ -137,16 +133,16 @@ model Scan {
 model Subscription {
   id             String             @id @default(cuid())
   
-  userId         String             @unique // One sub per user
+  userId         String             @unique
   user           User               @relation(fields: [userId], references: [id])
   
   status         SubscriptionStatus @default(ACTIVE)
-  planType       PlanType           // PERSONAL, GROUP, COMPANY
+  planType       PlanType
   
   startDate      DateTime           @default(now())
   endDate        DateTime
   
-  paymentRef     String?            // For Stripe/Midtrans ID
+  paymentRef     String?
   
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
