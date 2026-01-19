@@ -1,28 +1,26 @@
 import { prisma } from '@/lib/prisma'
-import ProfileForm from '@/components/ui/pages/dashboard/ProfileForm'
+import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { getAuthUserId } from '@/lib/auth';
+import ProfileForm from '@/components/ui/pages/dashboard/ProfileForm'
+import SecuritySettings from '@/components/ui/pages/dashboard/SecuritySettings'
+import AddressForm from '@/components/ui/pages/forms/AddressForm' // Import the form
+import { getUserAddress } from '@/actions/address' // Import the fetcher
 
 export default async function AccountPage() {
     const userId = await getAuthUserId();
+    if (!userId) redirect('/auth/login');
 
-    if (!userId) {
-        redirect('/auth');
-    }
+    // 1. Fetch User & Address Parallelly
+    const [user, address] = await Promise.all([
+        prisma.user.findUnique({
+            where: { id: userId },
+            include: { socialLinks: true }
+        }),
+        getUserAddress()
+    ]);
 
-    // 1. Fetch Real Data
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-            socialLinks: true
-        }
-    });
+    if (!user) redirect('/auth');
 
-    if (!user) {
-        redirect('/auth');
-    }
-
-    // 2. Format Data
     const userData = {
         fullName: user.fullName,
         email: user.email,
@@ -36,5 +34,45 @@ export default async function AccountPage() {
         }))
     };
 
-    return <ProfileForm user={userData} />
+    return (
+        <div className="max-w-4xl mx-auto py-8 space-y-12">
+            {/* Section 1: Public Profile */}
+            <section>
+                <div className="mb-6">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Public Profile</h2>
+                    <p className="text-gray-500 dark:text-gray-400">This information will be displayed on your digital card.</p>
+                </div>
+                <ProfileForm user={userData} />
+            </section>
+
+            <hr className="border-gray-200 dark:border-gray-800" />
+
+            {/* Section 2: Shipping Address (NEW) */}
+            <section>
+                <div className="mb-6">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Shipping Address</h2>
+                    <p className="text-gray-500 dark:text-gray-400">Used for card delivery and billing invoices.</p>
+                </div>
+                
+                <div className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+                    <AddressForm 
+                        initialData={address} 
+                        buttonText="Update Address"
+                        // Leaving redirectAfter undefined keeps the user on this page and shows a success alert
+                    />
+                </div>
+            </section>
+
+            <hr className="border-gray-200 dark:border-gray-800" />
+
+            {/* Section 3: Security & Danger Zone */}
+            <section>
+                <div className="mb-6">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Security & Account Access</h2>
+                    <p className="text-gray-500 dark:text-gray-400">Manage your password and account deletion preferences.</p>
+                </div>
+                <SecuritySettings />
+            </section>
+        </div>
+    )
 }

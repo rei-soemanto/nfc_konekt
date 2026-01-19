@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { getAuthUserId } from '@/lib/auth' // Import real auth
+import { getAuthUserId } from '@/lib/auth' 
 import PublicProfile from '@/components/ui/pages/public/PublicProfile'
 import { notFound } from 'next/navigation'
 
@@ -31,7 +31,7 @@ export default async function CardProfilePage({ params }: Props) {
     const isOwner = viewerId === card.user.id;
     let isFriend = false;
 
-    // 4. Check if they are already friends (only if logged in and not owner)
+    // 4. Check if they are already friends
     if (viewerId && !isOwner) {
         const friendRecord = await prisma.friend.findFirst({
             where: {
@@ -45,6 +45,7 @@ export default async function CardProfilePage({ params }: Props) {
     const userData = {
         id: card.user.id,
         fullName: card.user.fullName,
+        email: card.user.email,
         companyName: card.user.companyName,
         companyWebsite: card.user.companyWebsite,
         bio: card.user.bio,
@@ -52,14 +53,18 @@ export default async function CardProfilePage({ params }: Props) {
         socialLinks: card.user.socialLinks
     };
 
-    // Pass the new status flags to the component
+    // 5. Determine Back Link
+    // If logged in -> Dashboard. If anonymous -> Landing Page.
+    const backLink = viewerId ? '/dashboard' : '/';
+
     return (
         <PublicProfile 
             user={userData} 
             slug={slug} 
             isOwner={isOwner} 
             initialIsFriend={isFriend}
-            viewerId={viewerId} // Pass null if anonymous
+            viewerId={viewerId} 
+            backLink={backLink} // <--- Pass the link here
         />
     )
 }

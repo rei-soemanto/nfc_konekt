@@ -1,40 +1,48 @@
 import { prisma } from '@/lib/prisma'
-import SubscriptionPlans from '@/components/ui/pages/dashboard/SubscriptionPlans'
+import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { getAuthUserId } from '@/lib/auth';
+// Ensure this path matches exactly where you created the file. 
+// If it's in src/components/dashboard/SubscriptionTabs.tsx, update it here.
+import SubscriptionTabs from '@/components/ui/pages/subscription/SubscriptionTabs' 
 
 export default async function PaymentPage() {
     const userId = await getAuthUserId();
+    if (!userId) redirect('/auth');
 
-    if (!userId) {
-        redirect('/auth/login'); // Redirect to real login page
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { parentId: true }
+    });
+
+    // --- LOGIC: BLOCK TEAM MEMBERS ---
+    if (user?.parentId) {
+        return (
+            <div className="max-w-xl mx-auto py-16 text-center">
+                <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400">
+                    <i className="fa-solid fa-shield-halved text-3xl"></i>
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Billing Managed by Admin</h1>
+                {/* FIX: Escaped apostrophe here */}
+                <p className="text-gray-500 mb-8">
+                    Your account is part of a Team Plan. Subscription and billing are handled by your organization&apos;s administrator.
+                </p>
+                <a href="/dashboard/subscription/status" className="text-indigo-600 hover:underline">
+                    View Subscription Status
+                </a>
+            </div>
+        )
     }
 
-    return (
-        <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12 max-w-2xl mx-auto">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Upgrade Your Plan</h1>
-                <p className="text-gray-500 dark:text-gray-400 text-lg">
-                    Unlock the full potential of your digital networking with our premium features. 
-                    Secure payment powered by Midtrans.
-                </p>
-            </div>
+    // Fetch active plans for normal users
+    const plans = await prisma.plan.findMany({
+        orderBy: { price: 'asc' }
+    });
 
-            {/* Client Component handling the UI and Payment Logic */}
-            <SubscriptionPlans userId={userId} />
-            
-            <div className="mt-12 text-center">
-                <p className="text-sm text-gray-400 dark:text-gray-500 flex items-center justify-center gap-2">
-                    <i className="fa-solid fa-lock"></i>
-                    Payments are secure and encrypted.
-                </p>
-                <div className="mt-4 flex justify-center gap-4 opacity-50 grayscale hover:grayscale-0 transition-all">
-                    {/* Placeholder for payment logos */}
-                    <div className="h-8 w-12 bg-gray-200 dark:bg-gray-800 rounded"></div>
-                    <div className="h-8 w-12 bg-gray-200 dark:bg-gray-800 rounded"></div>
-                    <div className="h-8 w-12 bg-gray-200 dark:bg-gray-800 rounded"></div>
-                </div>
-            </div>
+    return (
+        <div className="max-w-6xl mx-auto py-8 px-4">
+            <h1 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Upgrade Your Plan</h1>
+            <p className="text-gray-500 mb-8">Choose the plan that fits your needs.</p>
+            <SubscriptionTabs plans={plans} userId={userId} />
         </div>
     )
 }

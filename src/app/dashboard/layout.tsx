@@ -1,47 +1,46 @@
 import { Sidebar } from '@/components/ui/layout/Sidebar'
-import { DashboardFooter } from '@/components/ui/layout/DashboardFooter'
+import { getAuthUserId } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { getAuthUserId } from '@/lib/auth' // <--- IMPORT THE REAL AUTH HELPER
 import { redirect } from 'next/navigation'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-    // 1. Use the REAL auth helper (checks cookies)
     const userId = await getAuthUserId();
+    if (!userId) redirect('/auth/login');
 
-    // 2. If no valid login, kick them out
-    if (!userId) {
-        redirect('/');
-    }
-
-    // 3. Fetch the logged-in user's specific data
     const user = await prisma.user.findUnique({
         where: { id: userId },
-        include: { subscription: true }
+        include: { subscription: { include: { plan: true } } }
     });
 
-    if (!user) {
-        redirect('/');
-    }
+    if (!user) redirect('/auth/login');
 
-    // 4. Format data for the Sidebar
-    const sidebarUserData = {
+    const userProps = {
         fullName: user.fullName,
-        plan: user.subscription?.planType.toLowerCase() || 'free',
+        plan: user.subscription?.plan?.category || 'FREE',
         avatarUrl: user.avatarUrl,
-        role: user.role // Pass role for the Admin check
+        role: user.role,
+        isInherited: !!user.parentId
     };
 
-    return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex transition-colors duration-300 font-sans">
-            {/* Pass the REAL user data to the Sidebar */}
-            <Sidebar user={sidebarUserData} />
+    // --- FETCH NEW TRANSACTION COUNT (ADMIN ONLY) ---
+    let newTxCount = 0;
+    if (user.role === 'ADMIN') {
+        newTxCount = await prisma.transaction.count({
+            where: {
+                isNew: true,
+                status: { in: ['PAID', 'PENDING'] },
+            }
+        });
+    }
 
-            <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-                <main className="flex-1 overflow-y-auto p-4 md:p-8">
-                    {children}
-                </main>
-                <DashboardFooter />
-            </div>
+    return (
+        <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+            {/* Pass the count to Sidebar */}
+            <Sidebar user={userProps} newTxCount={newTxCount} />
+            
+            <main className="flex-1 transition-all duration-300 ease-in-out w-full p-4 md:p-8">
+                {children}
+            </main>
         </div>
     )
 }

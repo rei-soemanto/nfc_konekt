@@ -4,49 +4,100 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logout } from '@/actions/auth'
 
-// 1. Update UserProps to include 'role'
 type UserProps = {
     fullName: string
-    plan: string
+    plan: string 
     avatarUrl: string | null
     role: string
+    isInherited: boolean 
 }
 
 type NavItem = {
     name: string
     href: string
     icon: string
+    badge?: number // <--- NEW: Support for notification count
     children?: { name: string; href: string; icon: string }[]
 }
 
-export function Sidebar({ user }: { user: UserProps }) {
+const PLAN_LABELS: Record<string, string> = {
+    'PERSONAL': 'Personal',
+    'GROUP': 'Group',
+    'COMPANY': 'Corporate',
+    'CORPORATE': 'Corporate',
+}
+
+// Update props to accept newTxCount
+export function Sidebar({ user, newTxCount = 0 }: { user: UserProps, newTxCount?: number }) {
     const pathname = usePathname()
 
-    // 2. Base Navigation
+    // 1. Base Navigation
     const navItems: NavItem[] = [
         { name: 'Dashboard', href: '/dashboard', icon: 'fa-chart-line' },
         { name: 'History', href: '/dashboard/history', icon: 'fa-clock-rotate-left' },
         { name: 'Friends', href: '/dashboard/friends', icon: 'fa-user-group' },
+    ]
+
+    // 2. TEAM FEATURES
+    if (!user.isInherited) {
+        if (['GROUP', 'COMPANY', 'CORPORATE'].includes(user.plan)) {
+            navItems.push({ 
+                name: 'My Team', 
+                href: '/dashboard/team', 
+                icon: 'fa-users-gear' 
+            })
+        }
+        if (['COMPANY', 'CORPORATE'].includes(user.plan)) {
+            navItems.push({ 
+                name: 'Write Cards', 
+                href: '/dashboard/team/writer', 
+                icon: 'fa-pen-to-square' 
+            })
+        }
+    }
+
+    // 3. STANDARD MENUS
+    navItems.push(
         { 
             name: 'Subscription', 
-            href: '/dashboard/subscription', 
+            href: '/dashboard/subscription/status', 
             icon: 'fa-credit-card', 
             children: [
                 { name: 'Status', href: '/dashboard/subscription/status', icon: 'fa-file-invoice' },
-                { name: 'Payment', href: '/dashboard/subscription/payment', icon: 'fa-wallet' }
+                ...(user.isInherited ? [] : [{ name: 'Payment', href: '/dashboard/subscription/payment', icon: 'fa-wallet' }])
             ]
         },
-        { name: 'Account', href: '/dashboard/account', icon: 'fa-user-gear' },
-    ]
+        { name: 'Account', href: '/dashboard/account', icon: 'fa-user-gear' }
+    )
 
-    // 3. CONDITIONALLY ADD ADMIN LINK
+    // 4. ADMIN TOOLS
     if (user.role === 'ADMIN') {
-        navItems.push({
-            name: 'NFC Writer',
-            href: '/dashboard/admin/writer',
-            icon: 'fa-wand-magic-sparkles' 
-        })
+        navItems.push(
+            {
+                name: 'NFC Writer',
+                href: '/dashboard/admin/writer',
+                icon: 'fa-wand-magic-sparkles' 
+            },
+            {
+                name: 'Manage Plans',
+                href: '/dashboard/admin/plans',
+                icon: 'fa-list-check' 
+            },
+            {
+                name: 'Manage Users',
+                href: '/dashboard/admin/users',
+                icon: 'fa-users' 
+            },
+            {
+                name: 'Transactions',
+                href: '/dashboard/admin/transactions',
+                icon: 'fa-handshake',
+                badge: newTxCount // <--- Pass the count here
+            }
+        )
     }
+
+    const displayPlan = PLAN_LABELS[user.plan] || user.plan || 'Free';
 
     return (
         <aside className="hidden md:flex flex-col w-64 h-screen sticky top-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-colors duration-300 z-40">
@@ -76,9 +127,16 @@ export function Sidebar({ user }: { user: UserProps }) {
                                 <i className={`fa-solid ${item.icon} w-6 text-center text-lg mr-3 transition-colors ${
                                     isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
                                 }`}></i>
-                                {item.name}
+                                <span className="flex-1">{item.name}</span>
                                 
-                                {item.children && (
+                                {/* NOTIFICATION BADGE */}
+                                {item.badge !== undefined && item.badge > 0 && (
+                                    <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-blue-600 rounded-full shadow-sm">
+                                        {item.badge}
+                                    </span>
+                                )}
+
+                                {item.children && !item.badge && (
                                     <i className="fa-solid fa-chevron-down ml-auto text-xs opacity-50 group-hover:rotate-180 transition-transform duration-200"></i>
                                 )}
                             </Link>
@@ -123,9 +181,12 @@ export function Sidebar({ user }: { user: UserProps }) {
                     <div className="ml-3 overflow-hidden">
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{user.fullName}</p>
                         
-                        {/* 4. Display 'Eternal' for Lifetime plans */}
-                        <p className={`text-xs truncate capitalize ${user.plan === 'lifetime' ? 'text-amber-500 font-bold' : 'text-gray-500 dark:text-gray-400'}`}>
-                            {user.plan === 'lifetime' ? '✨ Eternal' : user.plan}
+                        <p className={`text-xs truncate font-semibold ${
+                            displayPlan === 'Corporate' ? 'text-blue-600 dark:text-blue-400' :
+                            displayPlan === 'Group' ? 'text-purple-600 dark:text-purple-400' :
+                            'text-gray-500 dark:text-gray-400'
+                        }`}>
+                            {user.isInherited ? `${displayPlan} (Member)` : displayPlan}
                         </p>
                     </div>
                 </div>

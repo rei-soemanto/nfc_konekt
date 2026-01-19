@@ -16,6 +16,22 @@ enum Role {
   ADMIN
 }
 
+enum PlanCategory {
+  PERSONAL  
+  CORPORATE
+}
+
+enum PlanDuration {
+  MONTHLY
+  SIX_MONTHS
+  YEARLY
+}
+
+enum UserStatus {
+  ACTIVE
+  LOCKED
+}
+
 enum CardStatus {
   ACTIVE
   INACTIVE
@@ -41,6 +57,13 @@ enum FriendStatus {
   ACCEPTED
 }
 
+enum ShipmentStatus {
+  PENDING       // Waiting for payment
+  PROCESSING    // Payment received, preparing card
+  SHIPPING      // Sent to courier
+  ARRIVED       // Delivered
+}
+
 // --- MODELS ---
 
 model User {
@@ -54,45 +77,85 @@ model User {
   avatarUrl      String?   @db.Text
   bio            String?   @db.Text
   
-  role           Role      @default(USER)
+  role           Role        @default(USER)
+  accountStatus  UserStatus  @default(ACTIVE)
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  address        Address?
+
+  // TEAM / GROUP RELATIONS
+  parentId       String?
+  parent         User?       @relation("TeamMembers", fields: [parentId], references: [id], onDelete: NoAction)
+  members        User[]      @relation("TeamMembers")
 
   // Relations
   socialLinks    SocialLink[]
-  cards          Card[]    @relation("OwnedCards")
-  
-  // Scans I have made (Scanning History)
-  scansMade      Scan[]    @relation("ScansMade")
-  
-  // My active subscription
+  cards          Card[]      @relation("OwnedCards")
+  scansMade      Scan[]      @relation("ScansMade")
   subscription   Subscription?
-
-  // Friend Relations
+  
   friendsAsUser   Friend[]  @relation("UserFriends")
   friendsAsFriend Friend[]  @relation("FriendUsers")
+
+  tempSetupData  String?   @db.Text
+
+  transactions   Transaction[]
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Address {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  country     String
+  region      String   // State/Province
+  city        String
+  street      String
+  postalCode  String
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Friend {
   id        String       @id @default(cuid())
   
   userId    String
-  user      User         @relation("UserFriends", fields: [userId], references: [id])
+  user      User         @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
   
   friendId  String
-  friend    User         @relation("FriendUsers", fields: [friendId], references: [id])
+  friend    User         @relation("FriendUsers", fields: [friendId], references: [id], onDelete: Cascade)
   
   status    FriendStatus @default(PENDING)
-  
   createdAt DateTime     @default(now())
 
   @@unique([userId, friendId])
 }
 
+model Plan {
+  id            String        @id @default(cuid())
+  category      PlanCategory
+  duration      PlanDuration
+  price         Int           @default(0)
+
+  name          String        
+
+  expansionPrice Int          @default(0)
+  
+  subscriptions Subscription[]
+  transactions Transaction[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([category, duration])
+}
+
 model SocialLink {
   id           String   @id @default(cuid())
-  platform     String   // e.g., "Whatsapp", "LinkedIn"
+  platform     String
   url          String
   
   userId       String
@@ -107,7 +170,7 @@ model Card {
   status         CardStatus  @default(INACTIVE)
   
   userId         String
-  user           User        @relation("OwnedCards", fields: [userId], references: [id])
+  user           User        @relation("OwnedCards", fields: [userId], references: [id], onDelete: Cascade)
   
   scansReceived  Scan[]
   
@@ -119,10 +182,10 @@ model Scan {
   id         String   @id @default(cuid())
   
   scannerId  String
-  scanner    User     @relation("ScansMade", fields: [scannerId], references: [id])
+  scanner    User     @relation("ScansMade", fields: [scannerId], references: [id], onDelete: Cascade)
   
   cardId     String
-  card       Card     @relation(fields: [cardId], references: [id])
+  card       Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
   
   scannedAt  DateTime @default(now())
 
@@ -134,16 +197,60 @@ model Subscription {
   id             String             @id @default(cuid())
   
   userId         String             @unique
-  user           User               @relation(fields: [userId], references: [id])
-  
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   status         SubscriptionStatus @default(ACTIVE)
-  planType       PlanType
   
+  planId         String
+  plan           Plan               @relation(fields: [planId], references: [id])
+
+  expansionPacks Int                @default(0)
+
   startDate      DateTime           @default(now())
   endDate        DateTime
-  
-  paymentRef     String?
+
+  paymentId      String?            @unique
+  snapToken      String? 
+
+  shipmentStatus  ShipmentStatus    @default(PENDING)
+  shippingAddress String?           @db.Text
+
+  trackingLink    String?
+  isNew           Boolean           @default(true)
+
+  pendingTeamData String?           @db.Text
   
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
+}
+
+model Transaction {
+  id              String   @id @default(cuid())
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  planId          String?
+  plan            Plan?    @relation(fields: [planId], references: [id])
+  
+  type            String   // 'NEW', 'EXPANSION', 'RENEWAL'
+  status          String   // 'PENDING', 'PAID', 'EXPIRED', 'FAILED'
+  
+  amount          Float
+  paymentId       String   @unique // Midtrans Order ID
+  snapToken       String?
+  
+  // Shipment & Fulfillment Data (Snapshot)
+  shippingAddress String?  @db.Text
+  shipmentStatus  String   @default("PENDING") // 'PENDING' (Unpaid), 'PROCESSING', 'SHIPPING', 'ARRIVED'
+  trackingLink    String?
+  
+  // Content Data
+  expansionPacks  Int      @default(0)
+  pendingTeamData String?  @db.Text // The list of users to create upon success of THIS specific transaction
+  
+  isNew           Boolean  @default(true) // For Admin Notification
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

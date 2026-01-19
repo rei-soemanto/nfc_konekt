@@ -1,11 +1,15 @@
-import midtransClient from 'midtrans-client';
+import midtransClient from "midtrans-client";
 
-export const midtransSnap = new midtransClient.Snap({
+if (!process.env.MIDTRANS_SERVER_KEY) {
+    throw new Error("MIDTRANS_SERVER_KEY is not set");
+}
+
+export const coreApi = new midtransClient.CoreApi({
     isProduction: false, // sandbox
-    serverKey: process.env.MIDTRANS_SERVER_KEY!,
+    serverKey: process.env.MIDTRANS_SERVER_KEY,
 });
 
-export const midtransCore = new midtransClient.CoreApi({
-    isProduction: false, // sandbox
-    serverKey: process.env.MIDTRANS_SERVER_KEY!,
+export const snap = new midtransClient.Snap({
+    isProduction: false,
+    serverKey: process.env.MIDTRANS_SERVER_KEY,
 });

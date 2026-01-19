@@ -1,23 +1,47 @@
-import { getAdminData } from '@/actions/admin'
-import NFCWriter from '@/components/ui/pages/admin/NFCWriter'
+import { prisma } from '@/lib/prisma'
+import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import NFCWriter from '@/components/ui/pages/admin/NFCWriter'
 
 export default async function AdminWriterPage() {
-    try {
-        const { cards } = await getAdminData();
+    const userId = await getAuthUserId();
+    if (!userId) redirect('/auth/login');
 
-        return (
-            <div className="max-w-2xl mx-auto py-12 px-4">
-                <div className="mb-8 text-center">
-                    <span className="px-3 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold uppercase tracking-wider border border-red-200 dark:border-red-800">
-                        Admin Restricted Area
-                    </span>
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.role !== 'ADMIN') return redirect('/dashboard');
+
+    const allCards = await prisma.card.findMany({
+        where: { status: { not: 'LOST' } },
+        include: { user: true },
+        orderBy: { updatedAt: 'desc' }
+    });
+
+    // Pass email for search
+    const cardOptions = allCards.map(card => ({
+        id: card.id,
+        slug: card.slug,
+        owner: card.user.fullName,
+        email: card.user.email 
+    }));
+
+    return (
+        <div className="max-w-3xl mx-auto py-12">
+            <div className="flex justify-between items-center mb-8">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        <i className="fa-solid fa-user-shield text-indigo-500 mr-2"></i>
+                        Master Writer
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">
+                        Admin Access: Write any user profile to any card.
+                    </p>
                 </div>
-                <NFCWriter cards={cards} />
+                <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold border border-indigo-200">
+                    UNRESTRICTED
+                </span>
             </div>
-        )
-    } catch (error) {
-        // If unauthorized or not admin, redirect to main dashboard
-        redirect('/dashboard');
-    }
+
+            <NFCWriter cards={cardOptions} />
+        </div>
+    )
 }
