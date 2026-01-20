@@ -92,13 +92,26 @@ model User {
   cards          Card[]      @relation("OwnedCards")
   scansMade      Scan[]      @relation("ScansMade")
   subscription   Subscription?
+
+  // NEW: Company / Corporate Profile Fields
+  companyScope       String?  // e.g., "Tech", "Logistics"
+  companySpeciality  String?  // e.g., "Web Dev", "Supply Chain"
+  companyDescription String?  @db.Text
   
-  friendsAsUser   Friend[]  @relation("UserFriends")
-  friendsAsFriend Friend[]  @relation("FriendUsers")
+  // NEW: Employee / Individual Role Fields
+  jobTitle           String?  // The "Role on the company"
+  isCompanyPublic    Boolean  @default(true) // Admin can toggle this to hide user from public corporate profile
+
+  // Relations
+  connections        Connection[] @relation("UserConnections")
+  connectedBy        Connection[] @relation("ConnectedBy")
 
   tempSetupData  String?   @db.Text
+  tempDesignData  String?  @db.LongText
 
   transactions   Transaction[]
+
+  contacts Contact[]
 
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -119,19 +132,18 @@ model Address {
   updatedAt   DateTime @updatedAt
 }
 
-model Friend {
-  id        String       @id @default(cuid())
-  
+model Connection {
+  id        String   @id @default(cuid())
   userId    String
-  user      User         @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserConnections", fields: [userId], references: [id], onDelete: Cascade)
   
-  friendId  String
-  friend    User         @relation("FriendUsers", fields: [friendId], references: [id], onDelete: Cascade)
+  targetId  String
+  target    User     @relation("ConnectedBy", fields: [targetId], references: [id], onDelete: Cascade)
   
-  status    FriendStatus @default(PENDING)
-  createdAt DateTime     @default(now())
+  createdAt DateTime @default(now())
 
-  @@unique([userId, friendId])
+  @@unique([userId, targetId])
+  @@index([userId])
 }
 
 model Plan {
@@ -248,9 +260,28 @@ model Transaction {
   // Content Data
   expansionPacks  Int      @default(0)
   pendingTeamData String?  @db.Text // The list of users to create upon success of THIS specific transaction
+  cardDesign      String?  @db.LongText
   
   isNew           Boolean  @default(true) // For Admin Notification
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String
+  email       String?
+  company     String?
+  website     String?
+  phone       String?  // Good to have for business cards
+  jobTitle    String?  // Good to have
+  
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
 }

@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import StatsGrid from '@/components/ui/pages/dashboard/StatsGrid'
 import RecentActivity from '@/components/ui/pages/dashboard/RecentActivity'
-import QuickProfileCard from '@/components/ui/pages/dashboard/QuickProfileCard' // Import the new component
+import QuickProfileCard from '@/components/ui/pages/dashboard/QuickProfileCard'
 import { redirect } from 'next/navigation'
 
 // Helper for relative time
@@ -33,20 +33,20 @@ export default async function DashboardPage() {
     const [
         totalScansMade,
         totalScansReceived,
-        totalFriends,
-        friendsListRaw,
+        totalConnections, // Renamed from totalFriends
+        connectionsListRaw, // Renamed from friendsListRaw
         scannersListRaw,
         recentScansMade,
         recentScansReceived,
-        currentUser // <--- New Data Fetch
+        currentUser
     ] = await Promise.all([
         prisma.scan.count({ where: { scannerId: userId } }),
         prisma.scan.count({ where: { card: { userId: userId } } }),
-        prisma.friend.count({ where: { userId: userId } }),
+        prisma.connection.count({ where: { userId: userId } }), // Updated to Connection model
         
-        prisma.friend.findMany({ 
-            where: { userId: userId }, 
-            select: { friendId: true } 
+        prisma.connection.findMany({ 
+            where: { userId: userId },
+            select: { targetId: true } // Only fetch targetId
         }),
         
         prisma.scan.findMany({
@@ -69,7 +69,6 @@ export default async function DashboardPage() {
             include: { scanner: true }
         }),
 
-        // New Query: Get User Profile & Active Card
         prisma.user.findUnique({
             where: { id: userId },
             select: {
@@ -78,7 +77,7 @@ export default async function DashboardPage() {
                 avatarUrl: true,
                 cards: {
                     where: { status: 'ACTIVE' },
-                    take: 1, // Get the primary active card
+                    take: 1,
                     select: { slug: true, status: true }
                 }
             }
@@ -86,11 +85,15 @@ export default async function DashboardPage() {
     ]);
 
     // --- 2. Calculate Data ---
-    const friendIds = new Set(friendsListRaw.map(f => f.friendId));
+    // Fix: Use 'targetId' instead of 'friendId'
+    const connectionIds = new Set(connectionsListRaw.map(c => c.targetId));
+    
     const uniqueScanners = scannersListRaw.map(s => s.scannerId);
-    const scannersWhoAreFriends = uniqueScanners.filter(id => friendIds.has(id)).length;
+    // Fix: Filter based on connectionIds
+    const scannersWhoAreConnections = uniqueScanners.filter(id => connectionIds.has(id)).length;
+    
     const conversionRate = uniqueScanners.length > 0 
-        ? (scannersWhoAreFriends / uniqueScanners.length) * 100 
+        ? (scannersWhoAreConnections / uniqueScanners.length) * 100 
         : 0;
 
     // Merge Activity
@@ -135,7 +138,7 @@ export default async function DashboardPage() {
             <StatsGrid stats={{
                 totalScansMade,
                 totalScansReceived,
-                totalFriends,
+                totalFriends: totalConnections, // Pass as totalFriends if StatsGrid expects that prop name
                 friendConversionRate: conversionRate
             }} />
 
@@ -161,17 +164,18 @@ export default async function DashboardPage() {
                                 </div>
                                 Update Profile
                             </a>
-                            <a href="/dashboard/subscription" className="flex items-center p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm text-gray-700 dark:text-gray-300">
+                            <a href="/dashboard/subscription/status" className="flex items-center p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm text-gray-700 dark:text-gray-300">
                                 <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-500 flex items-center justify-center mr-3">
                                     <i className="fa-solid fa-crown text-xs"></i>
                                 </div>
                                 Manage Plan
                             </a>
-                            <a href="#" className="flex items-center p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm text-gray-700 dark:text-gray-300">
+                            {/* QR Code Action - Pointing to profile page usually */}
+                            <a href={`/p/${activeCard?.slug || ''}`} target="_blank" className="flex items-center p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm text-gray-700 dark:text-gray-300">
                                 <div className="w-8 h-8 rounded-full bg-teal-100 dark:bg-teal-900/20 text-teal-500 flex items-center justify-center mr-3">
-                                    <i className="fa-solid fa-download text-xs"></i>
+                                    <i className="fa-solid fa-qrcode text-xs"></i>
                                 </div>
-                                Download QR Code
+                                View My QR Code
                             </a>
                         </div>
                     </div>

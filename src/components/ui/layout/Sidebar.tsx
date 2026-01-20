@@ -16,7 +16,7 @@ type NavItem = {
     name: string
     href: string
     icon: string
-    badge?: number // <--- NEW: Support for notification count
+    badge?: number 
     children?: { name: string; href: string; icon: string }[]
 }
 
@@ -27,7 +27,6 @@ const PLAN_LABELS: Record<string, string> = {
     'CORPORATE': 'Corporate',
 }
 
-// Update props to accept newTxCount
 export function Sidebar({ user, newTxCount = 0 }: { user: UserProps, newTxCount?: number }) {
     const pathname = usePathname()
 
@@ -35,7 +34,8 @@ export function Sidebar({ user, newTxCount = 0 }: { user: UserProps, newTxCount?
     const navItems: NavItem[] = [
         { name: 'Dashboard', href: '/dashboard', icon: 'fa-chart-line' },
         { name: 'History', href: '/dashboard/history', icon: 'fa-clock-rotate-left' },
-        { name: 'Friends', href: '/dashboard/friends', icon: 'fa-user-group' },
+        { name: 'Connect', href: '/dashboard/connect', icon: 'fa-user-group' },
+        { name: 'Physical Cards', href: '/dashboard/contacts', icon: 'fa-address-book' },
     ]
 
     // 2. TEAM FEATURES
@@ -92,7 +92,7 @@ export function Sidebar({ user, newTxCount = 0 }: { user: UserProps, newTxCount?
                 name: 'Transactions',
                 href: '/dashboard/admin/transactions',
                 icon: 'fa-handshake',
-                badge: newTxCount // <--- Pass the count here
+                badge: newTxCount 
             }
         )
     }
@@ -129,7 +129,6 @@ export function Sidebar({ user, newTxCount = 0 }: { user: UserProps, newTxCount?
                                 }`}></i>
                                 <span className="flex-1">{item.name}</span>
                                 
-                                {/* NOTIFICATION BADGE */}
                                 {item.badge !== undefined && item.badge > 0 && (
                                     <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-blue-600 rounded-full shadow-sm">
                                         {item.badge}

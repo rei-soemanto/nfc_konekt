@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { getAuthUserId } from '@/lib/auth' // Use the REAL auth we fixed earlier
+import { getAuthUserId } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function logScan(cardSlug: string) {
@@ -14,7 +14,7 @@ export async function logScan(cardSlug: string) {
 
     if (!card) return { success: false, error: 'Card not found' };
 
-    // PREVENT SELF-SCAN LOGGING (Optional: Keep this to prevent cluttering history)
+    // PREVENT SELF-SCAN LOGGING
     if (card.userId === viewerId) return { success: false, reason: 'owner' };
 
     try {
@@ -32,7 +32,8 @@ export async function logScan(cardSlug: string) {
     }
 }
 
-export async function addFriend(targetUserId: string) {
+// Renamed to 'connectUser' to match new terminology
+export async function connectUser(targetUserId: string) {
     const currentUserId = await getAuthUserId();
     
     // 1. Check if logged in
@@ -40,17 +41,30 @@ export async function addFriend(targetUserId: string) {
         return { success: false, error: "You must be logged in to connect." };
     }
 
-    // 2. SELF-FRIEND CHECK: Prevent adding yourself
+    // 2. SELF-CONNECT CHECK
     if (currentUserId === targetUserId) {
-        return { success: false, error: "You cannot add yourself as a friend." };
+        return { success: false, error: "You cannot add yourself." };
+    }
+
+    // 3. SUBSCRIPTION CHECK (New Requirement)
+    const user = await prisma.user.findUnique({
+        where: { id: currentUserId },
+        include: { subscription: true, parent: { include: { subscription: true } } }
+    });
+    const sub = user?.subscription || user?.parent?.subscription;
+    
+    if (!sub || sub.status !== 'ACTIVE') {
+        return { success: false, error: "Subscription required to connect." };
     }
 
     try {
-        // 3. Check if already friends
-        const existing = await prisma.friend.findFirst({
+        // 4. Check if already connected (Using correct 'userId_targetId' unique constraint)
+        const existing = await prisma.connection.findUnique({
             where: {
-                userId: currentUserId,
-                friendId: targetUserId
+                userId_targetId: {
+                    userId: currentUserId,
+                    targetId: targetUserId // <--- FIXED FIELD NAME
+                }
             }
         });
 
@@ -58,18 +72,17 @@ export async function addFriend(targetUserId: string) {
             return { success: false, error: "Already connected." };
         }
 
-        // 4. Create the connection
-        // This means: "CurrentUser" ADDS "TargetUser" to their list
-        await prisma.friend.create({
+        // 5. Create the connection (Using 'targetId')
+        await prisma.connection.create({
             data: {
                 userId: currentUserId,
-                friendId: targetUserId
+                targetId: targetUserId // <--- FIXED FIELD NAME
             }
         });
 
         return { success: true };
     } catch (error) {
-        console.error("Add Friend Error:", error);
+        console.error("Connect Error:", error);
         return { success: false, error: "Database error" };
     }
 }

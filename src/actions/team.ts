@@ -45,7 +45,7 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
     // 1. SELF WRITE (Unchanged)
     if (data.writeMethod === 'SELF') {
         // ... (Keep existing logic)
-         const newUser = await prisma.user.create({
+        const newUser = await prisma.user.create({
             data: {
                 fullName: data.fullName,
                 email: data.email,
@@ -100,6 +100,7 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
                 type: 'SHIPMENT_REQUEST', // Specific type for existing slot usage
                 status: 'PAID', // It's part of an existing paid slot
                 amount: 0,
+                cardDesign: "Standard / Existing Plan Design",
                 paymentId: `REQ-${randomUUID()}`,
                 shippingAddress: parent.subscription.shippingAddress, // Use parent's existing address
                 shipmentStatus: 'PROCESSING',
@@ -120,21 +121,41 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
 
 export async function removeTeamMember(memberId: string) {
     const userId = await getAuthUserId();
-    if (!userId) throw new Error("Unauthorized");
+    if (!userId) return { success: false, message: "Unauthorized" };
 
-    // Security Check: Ensure the user being deleted is actually a child of the requester
+    // 1. Fetch Member & Validate Parent
     const member = await prisma.user.findUnique({
         where: { id: memberId }
     });
 
     if (!member || member.parentId !== userId) {
-        throw new Error("Unauthorized to remove this member");
+        return { success: false, message: "Unauthorized to remove this member" };
     }
 
+    // 2. CHECK SHIPMENT STATUS
+    // Search for any PAID transaction that is currently shipping this user's card
+    const activeShipment = await prisma.transaction.findFirst({
+        where: {
+            status: 'PAID',
+            shipmentStatus: { in: ['PROCESSING', 'SHIPPING'] }, // Not ARRIVED yet
+            pendingTeamData: {
+                contains: member.email // Check if this user is in the manifest
+            }
+        }
+    });
+
+    if (activeShipment) {
+        return { 
+            success: false, 
+            message: `Cannot remove member. A card shipment is currently ${activeShipment.shipmentStatus.toLowerCase()} for this user.` 
+        };
+    }
+
+    // 3. Delete
     await prisma.user.delete({
         where: { id: memberId }
     });
 
     revalidatePath('/dashboard/team');
-    return { success: true };
+    return { success: true, message: "Member removed successfully" };
 }

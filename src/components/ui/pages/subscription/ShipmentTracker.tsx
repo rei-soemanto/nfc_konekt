@@ -1,12 +1,33 @@
 'use client'
 
+import { useState } from 'react'
+import { markShipmentReceived } from '@/actions/user-transactions'
+
 type Props = {
     status: 'PENDING' | 'PROCESSING' | 'SHIPPING' | 'ARRIVED'
     trackingLink?: string | null
+    transactionId?: string // Needed for the Receive action
 }
 
-export default function ShipmentTracker({ status, trackingLink }: Props) {
-    // Define the flow
+export default function ShipmentTracker({ status, trackingLink, transactionId }: Props) {
+    const [loading, setLoading] = useState(false);
+
+    // --- NO ACTIVE SHIPMENT STATE ---
+    if (status === 'ARRIVED') {
+        return (
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-8 shadow-sm text-center">
+                <div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i className="fa-solid fa-box-open text-2xl"></i>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">No Active Shipping</h3>
+                <p className="text-gray-500 text-sm mt-2">
+                    Your last shipment has arrived. You are ready to make new orders if needed.
+                </p>
+            </div>
+        )
+    }
+
+    // --- TRACKING FLOW ---
     const steps = ['PROCESSING', 'SHIPPING', 'ARRIVED'];
     
     // Determine current step index (Default to -1 if pending)
@@ -33,6 +54,20 @@ export default function ShipmentTracker({ status, trackingLink }: Props) {
     };
 
     const progressWidth = currentStepIndex <= 0 ? 0 : (currentStepIndex / (steps.length - 1)) * 100;
+
+    const handleReceive = async () => {
+        if (!transactionId) return;
+        if (!confirm("Have you received the package? This will complete the shipment.")) return;
+
+        setLoading(true);
+        try {
+            await markShipmentReceived(transactionId);
+        } catch (error) {
+            alert("Failed to update status.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm">
@@ -86,33 +121,42 @@ export default function ShipmentTracker({ status, trackingLink }: Props) {
                 </div>
             </div>
 
-            {/* TRACKING LINK BUTTON */}
-            {trackingLink && (status === 'SHIPPING' || status === 'ARRIVED') && (
-                <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center text-center animate-fade-in">
+            {/* ACTION AREA */}
+            <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
+                
+                {/* Tracking Link */}
+                {trackingLink && status === 'SHIPPING' ? (
                     <a 
                         href={trackingLink} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="group flex items-center gap-2 px-5 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 rounded-full font-bold text-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300 rounded-full font-bold text-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all"
                     >
                         <span>Track Package</span>
-                        <i className="fa-solid fa-arrow-up-right-from-square text-xs group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"></i>
+                        <i className="fa-solid fa-arrow-up-right-from-square text-xs"></i>
                     </a>
-                    <p className="text-xs text-gray-400 mt-2">
-                        View detailed journey on courier's website
-                    </p>
-                </div>
-            )}
-
-            {/* Fallback Note if Shipping but no link */}
-            {status === 'SHIPPING' && !trackingLink && (
-                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg flex items-start gap-3">
-                    <i className="fa-solid fa-circle-info text-blue-600 mt-0.5"></i>
-                    <div className="text-sm text-blue-800 dark:text-blue-300">
-                        <strong>Tracking Info:</strong> Your tracking details will be updated here shortly.
+                ) : (
+                    <div className="text-sm text-gray-400 italic">
+                        {status === 'PROCESSING' ? 'Tracking available soon' : ''}
                     </div>
-                </div>
-            )}
+                )}
+
+                {/* Confirm Received Button */}
+                {status === 'SHIPPING' && (
+                    <button
+                        onClick={handleReceive}
+                        disabled={loading}
+                        className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-full shadow-lg shadow-green-500/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {loading ? <i className="fa-solid fa-circle-notch fa-spin"></i> : (
+                            <>
+                                <i className="fa-solid fa-check-double mr-2"></i>
+                                Shipment Received
+                            </>
+                        )}
+                    </button>
+                )}
+            </div>
         </div>
     )
 }

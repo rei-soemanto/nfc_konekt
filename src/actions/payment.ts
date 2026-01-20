@@ -19,10 +19,30 @@ async function hashPassword(plain: string) {
     return await bcrypt.hash(plain, 10);
 }
 
+// Helper: Check Active Shipment
+async function checkActiveShipment(userId: string) {
+    const activeShipment = await prisma.transaction.findFirst({
+        where: {
+            userId,
+            status: 'PAID',
+            shipmentStatus: { in: ['PROCESSING', 'SHIPPING'] }
+        }
+    });
+
+    if (activeShipment) {
+        throw new Error("You have a shipment in progress. Please wait for it to arrive before placing a new order.");
+    }
+}
+
 export async function createTransaction(planId: string, expansionPacks: number = 0, addressSnapshot: any = null) {
     const userId = await getAuthUserId();
     if (!userId) throw new Error("Unauthorized");
 
+    // 1. CHECK ACTIVE SHIPMENT
+    await checkActiveShipment(userId);
+
+    // FIX: Removed 'include' because tempSetupData/tempDesignData are scalar fields.
+    // They are returned automatically by findUnique.
     const user = await prisma.user.findUnique({ where: { id: userId } });
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
 
@@ -36,16 +56,15 @@ export async function createTransaction(planId: string, expansionPacks: number =
 
     const addressString = addressSnapshot ? JSON.stringify(addressSnapshot) : null;
     const pendingTeamData = user.tempSetupData || null; 
+    const cardDesign = user.tempDesignData || null;
     const orderId = `SUB-${randomUUID()}`;
 
     // --- CASE 1: FREE TRANSACTION ---
     if (totalPrice === 0) {
-        // ... (Keep existing Free Logic, but create a PAID Transaction record too for history)
         const now = new Date();
         const endDate = new Date();
         endDate.setDate(now.getDate() + (durationInfo?.days || 30));
 
-        // Create Transaction Record
         await prisma.transaction.create({
             data: {
                 userId,
@@ -57,11 +76,11 @@ export async function createTransaction(planId: string, expansionPacks: number =
                 shippingAddress: addressString,
                 shipmentStatus: addressString ? 'PROCESSING' : 'ARRIVED',
                 expansionPacks,
-                pendingTeamData
+                pendingTeamData,
+                cardDesign
             }
         });
 
-        // Update Subscription
         await prisma.subscription.upsert({
             where: { userId: userId },
             update: {
@@ -78,7 +97,7 @@ export async function createTransaction(planId: string, expansionPacks: number =
                 planId: plan.id,
                 expansionPacks: expansionPacks,
                 status: 'ACTIVE',
-                paymentId: `FREE-${randomUUID()}`, // Optional legacy field
+                paymentId: `FREE-${randomUUID()}`,
                 startDate: now,
                 endDate: endDate,
                 shippingAddress: addressString,
@@ -86,7 +105,6 @@ export async function createTransaction(planId: string, expansionPacks: number =
             }
         });
 
-        // Immediate Team Creation
         if (pendingTeamData) {
             const teamMembers = JSON.parse(pendingTeamData);
             for (const member of teamMembers) {
@@ -107,15 +125,17 @@ export async function createTransaction(planId: string, expansionPacks: number =
                     });
                 }
             }
-            await prisma.user.update({ where: { id: userId }, data: { tempSetupData: null } });
         }
+        
+        await prisma.user.update({ 
+            where: { id: userId }, 
+            data: { tempSetupData: null, tempDesignData: null } 
+        });
 
         return { status: 'free_activated', token: null };
     }
 
     // --- CASE 2: MIDTRANS TRANSACTION ---
-    
-    // 1. Create Midtrans Params
     const items = [{ id: plan.id, price: plan.price, quantity: 1, name: plan.name }];
     if (expansionPacks > 0) {
         items.push({
@@ -133,8 +153,7 @@ export async function createTransaction(planId: string, expansionPacks: number =
     };
 
     const transaction = await snap.createTransaction(parameters);
-    
-    // 2. CREATE TRANSACTION RECORD (The Log)
+
     await prisma.transaction.create({
         data: {
             userId,
@@ -147,23 +166,20 @@ export async function createTransaction(planId: string, expansionPacks: number =
             shippingAddress: addressString,
             shipmentStatus: 'PENDING',
             expansionPacks,
-            pendingTeamData
+            pendingTeamData,
+            cardDesign
         }
     });
 
-    // 3. UPSERT SUBSCRIPTION (The Current State)
-    // We set status to EXPIRED/Pending until paid. 
-    // We LINK this subscription to the transaction via paymentId if needed, 
-    // or just let the webhook sync them.
     await prisma.subscription.upsert({
         where: { userId: userId },
         update: {
             planId: plan.id,
             expansionPacks: expansionPacks,
-            paymentId: orderId, // Points to latest pending
+            paymentId: orderId,
             snapToken: transaction.token,
             shippingAddress: addressString,
-            shipmentStatus: 'PENDING', // Wait for payment to become PROCESSING
+            shipmentStatus: 'PENDING', 
         },
         create: {
             userId: userId,
@@ -178,9 +194,11 @@ export async function createTransaction(planId: string, expansionPacks: number =
         }
     });
 
-    // Clear temp data
-    if (pendingTeamData) {
-        await prisma.user.update({ where: { id: userId }, data: { tempSetupData: null } });
+    if (pendingTeamData || cardDesign) {
+        await prisma.user.update({ 
+            where: { id: userId }, 
+            data: { tempSetupData: null, tempDesignData: null } 
+        });
     }
 
     return { status: 'pending', token: transaction.token };
@@ -190,7 +208,14 @@ export async function createExpansionTransaction(planId: string, packsToAdd: num
     const userId = await getAuthUserId();
     if (!userId) throw new Error("Unauthorized");
 
-    const user = await prisma.user.findUnique({ where: { id: userId }, include: { subscription: true } });
+    await checkActiveShipment(userId);
+
+    // FIX: Only include 'subscription' relation. 
+    // tempSetupData and tempDesignData are returned automatically.
+    const user = await prisma.user.findUnique({ 
+        where: { id: userId }, 
+        include: { subscription: true } 
+    });
     const plan = await prisma.plan.findUnique({ where: { id: planId } });
 
     if (!user || !plan || !user.subscription) throw new Error("Invalid data");
@@ -201,6 +226,7 @@ export async function createExpansionTransaction(planId: string, packsToAdd: num
     
     const addressString = addressSnapshot ? JSON.stringify(addressSnapshot) : null;
     const pendingTeamData = user.tempSetupData || null; 
+    const cardDesign = user.tempDesignData || null;
     const orderId = `EXP-${randomUUID()}`;
 
     const parameters = {
@@ -216,7 +242,6 @@ export async function createExpansionTransaction(planId: string, packsToAdd: num
 
     const transaction = await snap.createTransaction(parameters);
     
-    // 1. Create Transaction Log
     await prisma.transaction.create({
         data: {
             userId,
@@ -228,26 +253,27 @@ export async function createExpansionTransaction(planId: string, packsToAdd: num
             snapToken: transaction.token,
             shippingAddress: addressString,
             shipmentStatus: 'PENDING',
-            expansionPacks: packsToAdd, // Only the added ones
-            pendingTeamData
+            expansionPacks: packsToAdd,
+            pendingTeamData,
+            cardDesign
         }
     });
 
-    // 2. Update Subscription (Latest Reference)
     await prisma.subscription.update({
         where: { userId: userId },
         data: {
             paymentId: orderId,
             snapToken: transaction.token,
-            // We do NOT update expansionPacks count yet (wait for success)
-            // But we do update shipment info so user sees "Processing" after payment
             shippingAddress: addressString, 
             shipmentStatus: 'PENDING' 
         }
     });
 
-    if (pendingTeamData) {
-        await prisma.user.update({ where: { id: userId }, data: { tempSetupData: null } });
+    if (pendingTeamData || cardDesign) {
+        await prisma.user.update({ 
+            where: { id: userId }, 
+            data: { tempSetupData: null, tempDesignData: null } 
+        });
     }
 
     return { token: transaction.token };

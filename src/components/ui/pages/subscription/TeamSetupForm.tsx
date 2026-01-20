@@ -53,7 +53,7 @@ export default function TeamSetupForm({ planId, packs, maxSeats, isExpansion = f
             await saveTeamSetupDraft(validMembers);
             // Now 'isExpansion' is defined and this line will work
             const modeParam = isExpansion ? '&mode=expansion' : '';
-            router.push(`/dashboard/subscription/checkout?planId=${planId}&packs=${packs}${modeParam}`);
+            router.push(`/dashboard/subscription/design?planId=${planId}&packs=${packs}${modeParam}`);
         } catch (error) {
             alert("Failed to save team data");
             setLoading(false);
@@ -148,7 +148,7 @@ export default function TeamSetupForm({ planId, packs, maxSeats, isExpansion = f
                     disabled={loading}
                     className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all"
                 >
-                    {loading ? <i className="fa-solid fa-circle-notch fa-spin"></i> : "Continue to Checkout"}
+                    {loading ? <i className="fa-solid fa-circle-notch fa-spin"></i> : "Continue to Card Design Choose"}
                 </button>
             </div>
         </form>
