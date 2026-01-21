@@ -6,8 +6,8 @@ export type CardTemplate = {
 
 export const CARD_TEMPLATES: CardTemplate[] = [
     // 1. Minimalist
-    { id: 'matte-black', name: 'Matte Black', image: '/designs/matte-black.jpg' },
-    { id: 'pearl-white', name: 'Pearl White', image: '/designs/pearl-white.jpg' },
+    { id: 'Minimalist Blue & White', name: 'Minimalist Blue & White', image: '/designs/Minimalist Blue & White.png' },
+    { id: 'Modern Tech Circuit', name: 'Modern Tech Circuit', image: '/designs/Modern Tech Circuit.png' },
     { id: 'slate-gray', name: 'Slate Gray', image: '/designs/slate-gray.jpg' },
     { id: 'concrete', name: 'Concrete', image: '/designs/concrete.jpg' },
     { id: 'obsidian', name: 'Obsidian', image: '/designs/obsidian.jpg' },

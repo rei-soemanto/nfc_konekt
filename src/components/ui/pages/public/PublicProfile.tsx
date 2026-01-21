@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { generateVCard } from '@/lib/vcard'
-import { logScan, addFriend } from '@/actions/scan'
-import Link from 'next/link' // Import Link
+import { logScan, connectUser } from '@/actions/scan'
+import Link from 'next/link'
 
 type UserProfile = {
     id: string
@@ -16,25 +16,27 @@ type UserProfile = {
     socialLinks: { platform: string; url: string }[]
 }
 
+// Ensure Props interface matches exactly what is passed from the server page
 export default function PublicProfile({ 
     user, 
     slug, 
     isOwner, 
     initialIsFriend,
     viewerId,
-    backLink // <--- Receive Prop
+    backLink 
 }: { 
     user: UserProfile, 
     slug: string,
     isOwner: boolean,
     initialIsFriend: boolean,
     viewerId: string | null,
-    backLink: string // <--- Define Type
+    backLink: string 
 }) {
     const [isFriend, setIsFriend] = useState(initialIsFriend);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
+        // Only log scan if it's not the owner viewing their own card
         if (!isOwner) {
             logScan(slug);
         }
@@ -54,12 +56,13 @@ export default function PublicProfile({
 
     const handleConnect = async () => {
         if (!viewerId) {
+            // Redirect to login if not authenticated, return to this profile after
             window.location.href = `/auth?redirect=/p/${slug}`;
             return;
         }
 
         setLoading(true);
-        const result = await addFriend(user.id);
+        const result = await connectUser(user.id);
         setLoading(false);
 
         if (result.success) {
@@ -69,21 +72,22 @@ export default function PublicProfile({
         }
     };
 
-    // Helper to format URL for display
+    // Helper to format URL for display (removes https:// and trailing slash)
     const formatUrl = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
     return (
-        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 relative">
 
+            {/* --- BACK BUTTON (Positioned Absolute to Screen) --- */}
             <Link 
                 href={backLink} 
-                className="absolute top-6 left-6 z-20 flex items-center gap-2 px-4 py-2 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full text-white/70 hover:text-white transition-all border border-white/10 group"
+                className="absolute top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full text-white/80 hover:text-white transition-all border border-white/10 group shadow-lg"
             >
                 <i className="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
                 <span className="text-sm font-medium">Back</span>
             </Link>
 
-            <div className="w-full max-w-lg bg-gray-800 rounded-3xl overflow-hidden shadow-2xl border border-gray-700 relative">
+            <div className="w-full max-w-lg bg-gray-800 rounded-3xl overflow-hidden shadow-2xl border border-gray-700 relative mt-12 md:mt-0">
                 
                 {/* Header Banner */}
                 <div className="h-40 bg-gradient-to-r from-indigo-600 to-violet-600 relative">

@@ -170,13 +170,6 @@ export default async function DashboardPage() {
                                 </div>
                                 Manage Plan
                             </a>
-                            {/* QR Code Action - Pointing to profile page usually */}
-                            <a href={`/p/${activeCard?.slug || ''}`} target="_blank" className="flex items-center p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm text-gray-700 dark:text-gray-300">
-                                <div className="w-8 h-8 rounded-full bg-teal-100 dark:bg-teal-900/20 text-teal-500 flex items-center justify-center mr-3">
-                                    <i className="fa-solid fa-qrcode text-xs"></i>
-                                </div>
-                                View My QR Code
-                            </a>
                         </div>
                     </div>
                 </div>

@@ -6,6 +6,7 @@ import SecuritySettings from '@/components/ui/pages/dashboard/SecuritySettings'
 import AddressForm from '@/components/ui/pages/forms/AddressForm' 
 import { getUserAddress } from '@/actions/address' 
 import CompanyProfileForm from '@/components/ui/pages/account/CompanyProfileForm'
+import dynamic from 'next/dynamic'
 
 export default async function AccountPage() {
     const userId = await getAuthUserId();
@@ -30,6 +31,7 @@ export default async function AccountPage() {
 
     const userData = {
         fullName: user.fullName,
+        phone: user.phone,
         email: user.email,
         companyName: user.companyName,
         companyWebsite: user.companyWebsite,
@@ -78,14 +80,15 @@ export default async function AccountPage() {
                 <>
                     <hr className="border-gray-200 dark:border-gray-800" />
                     <section>
-                         <div className="mb-6">
+                        <div className="mb-6">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Corporate Settings</h2>
                             <p className="text-gray-500 dark:text-gray-400">Manage your company details visible to your team.</p>
                         </div>
                         <CompanyProfileForm initialData={{
                             scope: user.companyScope,
                             speciality: user.companySpeciality,
-                            description: user.companyDescription
+                            description: user.companyDescription,
+                            logoUrl: user.companyLogoUrl
                         }} />
                     </section>
                 </>

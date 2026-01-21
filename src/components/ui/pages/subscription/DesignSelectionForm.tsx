@@ -4,14 +4,17 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveDesignChoice } from '@/actions/design'
 import { CARD_TEMPLATES } from '@/lib/designs'
+// FIX: Correct import path
+import DynamicCardPreview, { CardData } from '@/components/ui/pages/card-designer/DynamicCardPreview'
 
 type Props = {
     planId: string
     packs: number
     mode?: string
+    userData: CardData // Passing real data from server
 }
 
-export default function DesignSelectionForm({ planId, packs, mode }: Props) {
+export default function DesignSelectionForm({ planId, packs, mode, userData }: Props) {
     const router = useRouter();
     const [selectedTab, setSelectedTab] = useState<'TEMPLATE' | 'CUSTOM'>('TEMPLATE');
     const [selectedTemplate, setSelectedTemplate] = useState(CARD_TEMPLATES[0].id);
@@ -21,7 +24,6 @@ export default function DesignSelectionForm({ planId, packs, mode }: Props) {
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // CONVERT TO BASE64 for Admin Visibility
             const reader = new FileReader();
             reader.onloadend = () => {
                 setCustomFile(reader.result as string);
@@ -33,11 +35,9 @@ export default function DesignSelectionForm({ planId, packs, mode }: Props) {
     const handleContinue = async () => {
         setLoading(true);
         try {
-            // If Template: Save ID. 
-            // If Custom: Save the Base64 String directly.
             const designValue = selectedTab === 'TEMPLATE' 
                 ? `TEMPLATE:${selectedTemplate}` 
-                : `CUSTOM:${customFile}`; // <--- SENDS IMAGE DATA TO SERVER
+                : `CUSTOM:${customFile}`;
 
             await saveDesignChoice(designValue);
 
@@ -50,6 +50,15 @@ export default function DesignSelectionForm({ planId, packs, mode }: Props) {
             setLoading(false);
         }
     };
+
+    // Helper to get current preview image
+    const currentPreviewImage = selectedTab === 'TEMPLATE' 
+        ? CARD_TEMPLATES.find(t => t.id === selectedTemplate)?.image 
+        : customFile;
+
+    // Helper to determine text layout
+    // If Custom, use 'default' layout. If Template, use the template's specific layout ID.
+    const activeLayoutId = selectedTab === 'TEMPLATE' ? selectedTemplate : 'default';
 
     return (
         <div className="space-y-8">
@@ -124,7 +133,7 @@ export default function DesignSelectionForm({ planId, packs, mode }: Props) {
                     <div>
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white">Upload your custom design</h3>
                         <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
-                            Upload your brand assets (JPG, PNG).
+                            Upload your brand assets (JPG, PNG). Best ratio is 1.58:1 (Credit Card size).
                         </p>
                     </div>
                     
@@ -141,20 +150,36 @@ export default function DesignSelectionForm({ planId, packs, mode }: Props) {
                             />
                         </div>
                     ) : (
-                        <div className="space-y-4">
-                            <div className="relative w-full max-w-sm mx-auto aspect-[1.58/1] rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
-                                <img src={customFile} alt="Preview" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex items-center justify-center gap-3">
-                                <span className="text-sm font-bold text-green-600">
-                                    <i className="fa-solid fa-check mr-1"></i> Ready
-                                </span>
-                                <button onClick={() => setCustomFile(null)} className="text-xs text-red-500 underline">
-                                    Remove
-                                </button>
-                            </div>
+                        <div className="flex items-center justify-center gap-3">
+                            <span className="text-sm font-bold text-green-600">
+                                <i className="fa-solid fa-check mr-1"></i> File Selected
+                            </span>
+                            <button onClick={() => setCustomFile(null)} className="text-xs text-red-500 underline">
+                                Remove
+                            </button>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* --- PREVIEW SECTION --- */}
+            {currentPreviewImage && (
+                <div className="border-t border-gray-200 dark:border-gray-800 pt-8 mt-8">
+                    <div className="flex flex-col items-center">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                            Live Preview
+                        </h3>
+                        <p className="text-sm text-gray-500 mb-6">
+                            This is how your card will look with your profile data.
+                        </p>
+                        
+                        <DynamicCardPreview 
+                            data={userData} // <--- USING REAL DATA
+                            templateUrl={currentPreviewImage}
+                            templateId={activeLayoutId} // <--- USING CORRECT LAYOUT ID
+                            onGenerate={() => {}} 
+                        />
+                    </div>
                 </div>
             )}
 

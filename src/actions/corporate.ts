@@ -4,17 +4,30 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
-export async function updateCompanyProfile(data: { scope: string, speciality: string, description: string }) {
+type CompanyProfileData = {
+    scope: string
+    speciality: string
+    description: string
+    logoUrl?: string | null // <--- Add this
+}
+
+export async function updateCompanyProfile(data: CompanyProfileData) {
     const userId = await getAuthUserId();
     if (!userId) throw new Error("Unauthorized");
 
+    const updateData: any = {
+        companyScope: data.scope,
+        companySpeciality: data.speciality,
+        companyDescription: data.description,
+    };
+
+    if (data.logoUrl !== undefined) {
+        updateData.companyLogoUrl = data.logoUrl;
+    }
+
     await prisma.user.update({
         where: { id: userId },
-        data: {
-            companyScope: data.scope,
-            companySpeciality: data.speciality,
-            companyDescription: data.description
-        }
+        data: updateData
     });
 
     revalidatePath('/dashboard/account');

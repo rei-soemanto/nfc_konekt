@@ -63,11 +63,8 @@ export async function getMyConnections() {
     const userId = await getAuthUserId();
     if (!userId) return [];
 
-    // 1. VISIBILITY CHECK: Free users cannot SEE their list
+    // Subscription check
     try {
-        // We reuse the helper, assuming it's exported or defined in this file
-        // await checkSubscriptionAccess(userId); 
-        // For brevity, assuming access is checked or handled by the caller/UI state
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: { subscription: true, parent: { include: { subscription: true } } }
@@ -80,7 +77,7 @@ export async function getMyConnections() {
         return { error: "SUBSCRIPTION_REQUIRED", data: [] };
     }
 
-    const connections = await prisma.connection.findMany({
+    const rawConnections = await prisma.connection.findMany({
         where: { userId },
         include: { 
             target: {
@@ -90,12 +87,40 @@ export async function getMyConnections() {
                     email: true,
                     avatarUrl: true,
                     jobTitle: true,
-                    companyScope: true
-                    
+                    // Fetch OWN company details
+                    companyName: true,
+                    companyScope: true,
+                    companySpeciality: true,
+                    companyLogoUrl: true,
+                    // Fetch PARENT company details (for inheritance)
+                    parent: {
+                        select: {
+                            companyName: true,
+                            companyScope: true,
+                            companySpeciality: true,
+                            companyLogoUrl: true
+                        }
+                    }
                 }
             }
         },
         orderBy: { createdAt: 'desc' }
+    });
+
+    // Process the data to apply inheritance
+    const connections = rawConnections.map(c => {
+        const t = c.target;
+        // Logic: Use Target's data, if missing use Parent's data
+        return {
+            ...c,
+            target: {
+                ...t,
+                companyName: t.companyName || t.parent?.companyName || null,
+                companyScope: t.companyScope || t.parent?.companyScope || null,
+                companySpeciality: t.companySpeciality || t.parent?.companySpeciality || null,
+                companyLogoUrl: t.companyLogoUrl || t.parent?.companyLogoUrl || null,
+            }
+        };
     });
 
     return { success: true, data: connections };

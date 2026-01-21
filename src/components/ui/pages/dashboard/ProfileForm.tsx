@@ -9,6 +9,7 @@ import { SocialLinksEditor } from './SocialLinksEditor'
 interface UserProfileData {
     fullName: string
     email: string
+    phone: string | null // Changed from secondaryEmail
     companyName: string | null
     companyWebsite: string | null
     bio: string | null
@@ -133,21 +134,35 @@ export default function ProfileForm({ user }: { user: UserProfileData }) {
                             label="Email Address" 
                             defaultValue={user.email} 
                             // Email is usually read-only
-                            className="opacity-60 cursor-not-allowed bg-gray-50"
+                            className="opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50"
+                            readOnly
                         />
                         
+                        {/* --- NEW PHONE FIELD --- */}
+                        <Input 
+                            name="phone" 
+                            label="Phone Number" 
+                            defaultValue={user.phone || ''}
+                            placeholder="+1 (555) 000-0000"
+                            error={state?.errors?.phone} // Assuming your action returns error for phone now
+                        />
+
                         <Input 
                             name="companyName" 
                             label="Company Name" 
                             defaultValue={user.companyName || ''} 
                             error={state?.errors?.companyName}
                         />
-                        <Input 
-                            name="companyWebsite" 
-                            label="Company Website" 
-                            defaultValue={user.companyWebsite || ''} 
-                            error={state?.errors?.companyWebsite}
-                        />
+                        
+                        <div className="md:col-span-2">
+                            <Input 
+                                name="companyWebsite" 
+                                label="Company Website" 
+                                defaultValue={user.companyWebsite || ''} 
+                                error={state?.errors?.companyWebsite}
+                                placeholder="https://example.com"
+                            />
+                        </div>
                     </div>
 
                     {/* Bio */}

@@ -25,7 +25,8 @@ export class ProfileDataService {
             where: { id: targetUserId },
             include: {
                 socialLinks: true,
-                parent: true, // Needed to find corporate root
+                parent: true,
+                address: true,
             }
         });
         return user;
@@ -91,6 +92,7 @@ export class ProfileDataService {
             scope: user.companyScope || user.parent?.companyScope || null,
             speciality: user.companySpeciality || user.parent?.companySpeciality || null,
             description: user.companyDescription || user.parent?.companyDescription || null,
+            logoUrl: user.companyLogoUrl || user.parent?.companyLogoUrl || null,
         };
     }
 }

@@ -19,22 +19,22 @@ type Props = {
         scope: string | null
         speciality: string | null
         description: string | null
+        logoUrl?: string | null // <--- Added logoUrl
     }
     teamMembers: TeamMember[]
     hasSubscription: boolean
-    variant?: 'public' | 'dashboard' // <--- NEW PROP
+    variant?: 'public' | 'dashboard'
 }
 
 export default function CorporateProfileCard({ 
     details, 
     teamMembers, 
     hasSubscription, 
-    variant = 'public' // Default to public (slug-based)
+    variant = 'public' 
 }: Props) {
     const [membersState, setMembersState] = useState(teamMembers);
     const [loadingId, setLoadingId] = useState<string | null>(null);
 
-    // Hide if absolutely no data
     if (!details.scope && !details.description && teamMembers.length === 0) return null;
 
     const handleConnect = async (memberId: string) => {
@@ -56,10 +56,20 @@ export default function CorporateProfileCard({
     return (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm mt-6">
             <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h3 className="font-bold text-gray-900 dark:text-white flex items-center">
-                    <i className="fa-solid fa-building mr-2 text-indigo-600"></i>
-                    Corporate Overview
-                </h3>
+                <div className="flex items-center gap-3">
+                    {/* Company Logo Display */}
+                    {hasSubscription && details.logoUrl ? (
+                        <div className="w-8 h-8 rounded-lg bg-white p-0.5 border border-gray-200 overflow-hidden">
+                            <img src={details.logoUrl} alt="Company Logo" className="w-full h-full object-contain" />
+                        </div>
+                    ) : (
+                        <i className="fa-solid fa-building text-indigo-600 text-lg"></i>
+                    )}
+                    <h3 className="font-bold text-gray-900 dark:text-white">
+                        Corporate Overview
+                    </h3>
+                </div>
+                
                 {!hasSubscription && (
                     <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
                         <i className="fa-solid fa-lock mr-1"></i> Premium View
@@ -69,9 +79,7 @@ export default function CorporateProfileCard({
 
             <div className="p-6">
                 {hasSubscription ? (
-                    // --- UNLOCKED VIEW ---
                     <div className="space-y-8">
-                        
                         {/* 1. Company Details */}
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -101,7 +109,6 @@ export default function CorporateProfileCard({
                                 </h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {membersState.map((member) => {
-                                        // LOGIC: If 'dashboard', use ID link. If 'public', use Slug link.
                                         const profileLink = variant === 'dashboard'
                                             ? `/dashboard/connect/${member.id}`
                                             : (member.slug ? `/p/${member.slug}` : '#');
@@ -110,8 +117,6 @@ export default function CorporateProfileCard({
 
                                         return (
                                             <div key={member.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-colors group">
-                                                
-                                                {/* Profile Link */}
                                                 <Link 
                                                     href={profileLink} 
                                                     className={`flex items-center gap-3 flex-1 min-w-0 ${!canClick ? 'cursor-default pointer-events-none' : ''}`}
@@ -129,7 +134,6 @@ export default function CorporateProfileCard({
                                                     </div>
                                                 </Link>
 
-                                                {/* Connect Button */}
                                                 {!member.isViewer && (
                                                     <div className="ml-2">
                                                         {member.isConnected ? (
@@ -158,12 +162,12 @@ export default function CorporateProfileCard({
                                 </div>
                             </div>
                         )}
-
                     </div>
                 ) : (
-                    // --- LOCKED VIEW (Blurred) ---
+                    // Locked View (No changes here)
                     <div className="text-center py-8 relative">
-                         <div className="filter blur-sm select-none opacity-50 space-y-4">
+                        {/* ... locked view content ... */}
+                        <div className="filter blur-sm select-none opacity-50 space-y-4">
                             <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
                             <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
                             <div className="grid grid-cols-2 gap-4 pt-4">
