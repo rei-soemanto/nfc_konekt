@@ -11,17 +11,32 @@ export async function PATCH(
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id: memberId } = await params;
-    const body = await req.json();
 
     try {
+        const body = await req.json();
+
+        // Extract ONLY role and isHidden
+        const { role, isHidden } = body;
+
+        // Validation (Optional but recommended)
+        if (role && role !== 'USER' && role !== 'ADMIN') {
+            return NextResponse.json({ error: "Invalid Role" }, { status: 400 });
+        }
+
         const updatedMember = await TeamService.updateMember(userId, memberId, {
-            fullName: body.fullName,
-            jobTitle: body.jobTitle,
-            phone: body.phone
+            role,
+            isHidden
         });
 
-        const { password, ...safeMember } = updatedMember;
-        return NextResponse.json({ success: true, data: safeMember });
+        return NextResponse.json({ 
+            success: true, 
+            message: "Member updated successfully",
+            data: {
+                ...updatedMember,
+                // Return 'isHidden' to frontend for consistency
+                isHidden: !updatedMember.isCompanyPublic 
+            }
+        });
 
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 400 });

@@ -60,6 +60,54 @@ export class ConnectionService {
         }));
     }
 
+    static async addConnection(requesterId: string, slug: string) {
+        // 1. Find the User who owns this card
+        const card = await prisma.card.findUnique({
+            where: { slug },
+            include: { user: true }
+        });
+
+        if (!card) throw new Error("Card not found");
+        if (card.userId === requesterId) throw new Error("You cannot connect with yourself");
+
+        const targetId = card.userId;
+
+        // 2. Check if already connected
+        const existing = await prisma.connection.findUnique({
+            where: {
+                userId_targetId: {
+                    userId: requesterId,
+                    targetId: targetId
+                }
+            }
+        });
+
+        if (existing) {
+            return { message: "Already connected", user: card.user };
+        }
+
+        // 3. Create the Connection
+        // (Assuming 1-way follow for now. If you want mutual, create two records)
+        await prisma.connection.create({
+            data: {
+                userId: requesterId,
+                targetId: targetId
+            }
+        });
+
+        // 4. Return the user details so the App can show "Connected with Rei!"
+        return { 
+            message: "Connected successfully", 
+            user: {
+                id: card.user.id,
+                fullName: card.user.fullName,
+                avatarUrl: card.user.avatarUrl,
+                companyName: card.user.companyName,
+                jobTitle: card.user.jobTitle
+            }
+        };
+    }
+
     /**
      * Get detailed profile of a specific connected user
      */

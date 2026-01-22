@@ -18,3 +18,28 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
+
+export async function POST(req: Request) {
+    const userId = await getAuthUserId(req);
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    try {
+        const body = await req.json();
+        const { slug } = body;
+
+        if (!slug) {
+            return NextResponse.json({ error: "Card Slug is required" }, { status: 400 });
+        }
+
+        const result = await ConnectionService.addConnection(userId, slug);
+
+        return NextResponse.json({
+            success: true,
+            data: result
+        });
+
+    } catch (error: any) {
+        console.error("Add Connection Error:", error);
+        return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+}

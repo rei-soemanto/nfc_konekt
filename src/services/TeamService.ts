@@ -102,20 +102,37 @@ export class TeamService {
     /**
      * Update a member's details
      */
-    static async updateMember(adminId: string, memberId: string, data: { fullName?: string, jobTitle?: string, phone?: string }) {
-        // Security: Ensure this member belongs to this admin
+    static async updateMember(adminId: string, memberId: string, data: { role?: 'USER' | 'ADMIN', isHidden?: boolean }) {
+        // 1. Security: Ensure this member belongs to this admin
         const member = await prisma.user.findFirst({
             where: { id: memberId, parentId: adminId }
         });
 
         if (!member) throw new Error("Member not found or unauthorized.");
 
+        // 2. Prepare Update Data
+        const updateData: any = {};
+
+        // Handle Role Update
+        if (data.role) {
+            updateData.role = data.role;
+        }
+
+        // Handle Visibility Update
+        // Map 'isHidden' (UI concept) to 'isCompanyPublic' (DB concept)
+        if (data.isHidden !== undefined) {
+            updateData.isCompanyPublic = !data.isHidden;
+        }
+
+        // 3. Perform Update
         return await prisma.user.update({
             where: { id: memberId },
-            data: {
-                fullName: data.fullName,
-                jobTitle: data.jobTitle,
-                phone: data.phone
+            data: updateData,
+            select: {
+                id: true,
+                fullName: true,
+                role: true,
+                isCompanyPublic: true
             }
         });
     }
