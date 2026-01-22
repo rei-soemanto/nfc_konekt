@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
             // B. Update Subscription (The "User Display" State)
             // Logic differs for NEW vs EXPANSION
-            if (tx.type === 'NEW') {
+            if (tx.type === 'NEW_SUBSCRIPTION' || tx.type === 'NEW') {
                 await prisma.subscription.update({
                     where: { userId: tx.userId },
                     data: {

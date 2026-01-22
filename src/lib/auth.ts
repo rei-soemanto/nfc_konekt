@@ -1,28 +1,29 @@
-// src/lib/auth.ts
-import { cookies, headers } from 'next/headers'
-import { verifyToken } from '@/lib/jwt' // Or however you verify tokens
+import { cookies } from 'next/headers'
+import { jwtVerify } from 'jose'
 
-// 1. Add "?" to make request optional
-export async function getAuthUserId(request?: Request) {
-    
-    // Scenario A: API Route (Mobile) - Check Authorization Header
-    if (request) {
-        const authHeader = request.headers.get('Authorization');
-        if (authHeader?.startsWith('Bearer ')) {
-            const token = authHeader.split(' ')[1];
-            const payload = await verifyToken(token);
-            return payload?.userId || null;
+export async function getAuthUserId(req?: Request): Promise<string | null> {
+    try {
+        // 1. Try Header (Mobile/Postman)
+        const authHeader = req?.headers.get('Authorization');
+        let token = authHeader?.startsWith("Bearer ") ? authHeader.split(' ')[1] : null;
+
+        // 2. Try Cookie (Web) - Only if no header
+        if (!token) {
+            const cookieStore = await cookies();
+            const cookieToken = cookieStore.get('session_token');
+            if (cookieToken) token = cookieToken.value;
         }
-    }
 
-    // Scenario B: Web Dashboard (Server Component) - Check Cookies
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('auth_token')?.value; // Or 'next-auth.session-token'
-    
-    if (sessionToken) {
-        const payload = await verifyToken(sessionToken);
-        return payload?.userId || null;
-    }
+        if (!token) return null;
 
-    return null;
+        // 3. Verify
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
+        const { payload } = await jwtVerify(token, secret);
+        
+        return payload.userId as string;
+    } catch (error) {
+        // Log error to see if it's an auth crash
+        console.error("Auth Token Error:", error); 
+        return null;
+    }
 }

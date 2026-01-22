@@ -1,10 +1,9 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
 import { SignJWT } from 'jose'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import bcrypt from 'bcryptjs' // Ensure you have installed: npm install bcryptjs @types/bcryptjs
+import { AuthService } from '@/services/AuthService' // Import the new Service
 
 export type AuthState = {
     message?: string
@@ -26,13 +25,14 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
     }
 
     try {
-        const user = await prisma.user.findUnique({ where: { email } })
+        // REFACTOR: Use Service instead of direct Prisma/Bcrypt calls
+        const user = await AuthService.validateUser(email, password)
         
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        if (!user) {
             return { message: "Invalid email or password." }
         }
 
-        // Create Session Token
+        // Create Session Token (Web Context uses 'jose' for Edge compatibility)
         const secret = new TextEncoder().encode(process.env.JWT_SECRET_KEY)
         const token = await new SignJWT({ userId: user.id, role: user.role })
             .setProtectedHeader({ alg: 'HS256' })
@@ -75,34 +75,15 @@ export async function signup(prevState: AuthState, formData: FormData): Promise<
     }
 
     try {
-        const existingUser = await prisma.user.findUnique({ where: { email } })
-        if (existingUser) {
-            return { 
-                message: "User already exists.",
-                errors: { email: ["This email is already registered."] } 
-            }
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10)
-
-        // Create User & Default Card
-        const newUser = await prisma.user.create({
-            data: {
-                fullName,
-                email,
-                password: hashedPassword,
-                companyName: companyName || null,
-                role: 'USER',
-                cards: {
-                    create: {
-                        slug: fullName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000),
-                        status: 'ACTIVE'
-                    }
-                }
-            }
+        // REFACTOR: Use Service to handle check, hash, and create
+        const newUser = await AuthService.registerUser({
+            fullName,
+            email,
+            password,
+            companyName
         })
 
-        // Auto Login
+        // Auto Login (Create Session Token)
         const secret = new TextEncoder().encode(process.env.JWT_SECRET_KEY)
         const token = await new SignJWT({ userId: newUser.id, role: newUser.role })
             .setProtectedHeader({ alg: 'HS256' })
@@ -118,8 +99,17 @@ export async function signup(prevState: AuthState, formData: FormData): Promise<
             maxAge: 60 * 60 * 24 * 7
         })
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Signup Error:", error)
+        
+        // Handle specific Service error
+        if (error.message === "User already exists") {
+            return { 
+                message: "User already exists.",
+                errors: { email: ["This email is already registered."] } 
+            }
+        }
+
         return { message: "Failed to create account." }
     }
 
@@ -130,5 +120,5 @@ export async function signup(prevState: AuthState, formData: FormData): Promise<
 export async function logout() {
     const cookieStore = await cookies()
     cookieStore.delete('session_token')
-    redirect('/') // or redirect('/auth') depending on your route
+    redirect('/') 
 }

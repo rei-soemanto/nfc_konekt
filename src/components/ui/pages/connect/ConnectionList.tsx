@@ -174,6 +174,7 @@ export default function ConnectionList({ isLocked, connections }: Props) {
 
                         {/* Industry Dropdown */}
                         <Select
+                            instanceId="filter-industry"
                             options={options.industries}
                             value={selectedIndustry}
                             onChange={(opt) => setSelectedIndustry(opt)}
@@ -185,6 +186,7 @@ export default function ConnectionList({ isLocked, connections }: Props) {
 
                         {/* Specialty Dropdown */}
                         <Select
+                            instanceId="filter-industry"
                             options={options.specialties}
                             value={selectedSpecialty}
                             onChange={(opt) => setSelectedSpecialty(opt)}
@@ -196,6 +198,7 @@ export default function ConnectionList({ isLocked, connections }: Props) {
 
                         {/* Company Dropdown */}
                         <Select
+                            instanceId="filter-industry"
                             options={options.companies}
                             value={selectedCompany}
                             onChange={(opt) => setSelectedCompany(opt)}

@@ -30,11 +30,20 @@ export class ContactService {
         return { contact, registeredProfile };
     }
 
-    // Needed for the API Route list view
     static async getAllContacts(userId: string) {
         return await prisma.contact.findMany({
             where: { userId },
-            orderBy: { name: 'asc' }
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                jobTitle: true,
+                company: true,
+                avatarUrl: false,
+                notes: false
+            }
         });
     }
 }

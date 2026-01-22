@@ -40,16 +40,34 @@ export default function NFCWriter({ cards }: { cards: CardOption[] }) {
             setStatus('SCANNING');
             setMessage("Tap an NFC tag to write...");
 
+            // 1. FETCH SECURE PAYLOAD FROM API
+            // This ensures we write the exact same format as the User App
+            const res = await fetch('/api/cards/write', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slug: selectedSlug })
+            });
+
+            const json = await res.json();
+
+            if (!res.ok || !json.success) {
+                throw new Error(json.error || "Failed to generate write payload");
+            }
+
+            const secureUrl = json.data.payload;
+
+            // 2. Write to Tag
             // @ts-ignore
             const ndef = new NDEFReader();
-            const fullUrl = `${window.location.origin}/p/${selectedSlug}`.trim();
+            
+            console.log("Writing Secure URL:", secureUrl);
 
             await ndef.write({
-                records: [{ recordType: "url", data: fullUrl }]
+                records: [{ recordType: "url", data: secureUrl }]
             });
 
             setStatus('SUCCESS');
-            setMessage(`Successfully wrote: ${fullUrl}`);
+            setMessage(`Successfully wrote: ${secureUrl}`);
         } catch (error: any) {
             console.error(error);
             setStatus('ERROR');

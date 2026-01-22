@@ -11,12 +11,11 @@ export default function NFCWriterClient({ members }: { members: Member[] }) {
     const [status, setStatus] = useState<'IDLE' | 'SCANNING' | 'SUCCESS' | 'ERROR'>('IDLE')
     const [errorMsg, setErrorMsg] = useState('')
     const [isAndroid, setIsAndroid] = useState(true) 
-    const [previewUrl, setPreviewUrl] = useState('') // Initialize empty state for SSR safety
+    const [previewUrl, setPreviewUrl] = useState('') 
 
     // 1. Security Check: Enforce Android for Corporate
     useEffect(() => {
         const checkDevice = () => {
-            // Check if navigator is available (client-side)
             if (typeof navigator !== 'undefined') {
                 const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
                 if (!/android/i.test(userAgent)) {
@@ -27,8 +26,7 @@ export default function NFCWriterClient({ members }: { members: Member[] }) {
         checkDevice();
     }, []);
 
-    // 2. URL Builder (Client-Side Only)
-    // FIX: Moved from useMemo to useEffect to avoid "window is not defined" error
+    // 2. Preview URL (Visual only - Actual payload comes from API)
     useEffect(() => {
         if (typeof window !== 'undefined' && selectedSlug) {
             setPreviewUrl(`${window.location.origin}/p/${selectedSlug}`);
@@ -53,17 +51,28 @@ export default function NFCWriterClient({ members }: { members: Member[] }) {
         setErrorMsg('');
 
         try {
+            // 3. FETCH SECURE PAYLOAD FROM API
+            // This ensures the user actually has permission to write this card
+            const res = await fetch('/api/cards/write', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slug: selectedSlug })
+            });
+
+            const json = await res.json();
+
+            if (!res.ok || !json.success) {
+                throw new Error(json.error || "Failed to generate write payload");
+            }
+
+            const secureUrl = json.data.payload;
+            console.log("Writing Secure URL:", secureUrl);
+
+            // 4. Write to NFC Tag
             // @ts-ignore
             const ndef = new NDEFReader();
-            
-            // 3. Construct Data
-            // We can safely use window here because this function runs on click (client-side)
-            const fullUrl = `${window.location.origin}/p/${selectedSlug}`.trim();
-
-            console.log("Writing URL:", fullUrl);
-
             await ndef.write({
-                records: [{ recordType: "url", data: fullUrl }]
+                records: [{ recordType: "url", data: secureUrl }]
             });
 
             setStatus('SUCCESS');
