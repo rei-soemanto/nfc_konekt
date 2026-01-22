@@ -2,8 +2,7 @@
 
 import Link from 'next/link'
 
-// Define interfaces for the props
-interface ContactViewProps {
+interface ContactDetailViewProps {
     contact: {
         id: string
         name: string
@@ -22,7 +21,7 @@ interface ContactViewProps {
     } | null
 }
 
-export default function ContactDetailView({ contact, registeredProfile }: ContactViewProps) {
+export default function ContactDetailView({ contact, registeredProfile }: ContactDetailViewProps) {
     return (
         <div className="max-w-3xl mx-auto py-8 px-4">
             <div className="mb-6">
@@ -32,14 +31,14 @@ export default function ContactDetailView({ contact, registeredProfile }: Contac
             </div>
 
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-xl">
-                {/* Card Header Style */}
+                {/* Header */}
                 <div className="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-indigo-900 dark:to-purple-900 p-8 text-white">
                     <div className="flex items-start justify-between">
                         <div>
                             <div className="flex items-center gap-3">
                                 <h1 className="text-3xl font-bold">{contact.name}</h1>
                                 
-                                {/* --- INDICATOR: Registered User --- */}
+                                {/* Registered Member Badge */}
                                 {registeredProfile && (
                                     <Link 
                                         href={registeredProfile.cards[0] ? `/p/${registeredProfile.cards[0].slug}` : '#'}
@@ -67,7 +66,7 @@ export default function ContactDetailView({ contact, registeredProfile }: Contac
                             )}
                         </div>
 
-                        {/* Avatar Logic */}
+                        {/* Avatar Display Logic */}
                         <div className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl border border-white/10 overflow-hidden shadow-inner">
                             {registeredProfile?.avatarUrl ? (
                                 <img 
@@ -82,14 +81,13 @@ export default function ContactDetailView({ contact, registeredProfile }: Contac
                     </div>
                 </div>
                 
-                {/* Card Details */}
+                {/* Details Body */}
                 <div className="p-8 space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        
-                        {/* Contact Info Column */}
                         <div className="space-y-5">
                             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Contact Information</h3>
                             
+                            {/* Email */}
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                                     <i className="fa-solid fa-envelope"></i>
@@ -100,6 +98,7 @@ export default function ContactDetailView({ contact, registeredProfile }: Contac
                                 </div>
                             </div>
 
+                            {/* Phone */}
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                                     <i className="fa-solid fa-phone"></i>
@@ -110,6 +109,7 @@ export default function ContactDetailView({ contact, registeredProfile }: Contac
                                 </div>
                             </div>
 
+                            {/* Website */}
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                                     <i className="fa-solid fa-globe"></i>
@@ -127,7 +127,7 @@ export default function ContactDetailView({ contact, registeredProfile }: Contac
                             </div>
                         </div>
 
-                        {/* Notes Column */}
+                        {/* Notes */}
                         <div className="space-y-4">
                             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Scanned Notes</h3>
                             <div className="bg-gray-50 dark:bg-gray-800/30 rounded-xl p-5 border border-gray-100 dark:border-gray-800 min-h-[160px]">

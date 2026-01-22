@@ -1,26 +1,28 @@
-import { jwtVerify } from 'jose'
-import { cookies } from 'next/headers'
+// src/lib/auth.ts
+import { cookies, headers } from 'next/headers'
+import { verifyToken } from '@/lib/jwt' // Or however you verify tokens
 
-export async function getAuthUserId() {
-    const cookieStore = await cookies()
+// 1. Add "?" to make request optional
+export async function getAuthUserId(request?: Request) {
     
-    // 1. Check if cookie exists
-    // MAKE SURE THIS MATCHES YOUR LOGIN COOKIE NAME
-    const token = cookieStore.get('session_token')?.value 
-
-    if (!token) {
-        console.log("AUTH DEBUG: No token found in cookies.");
-        return null
+    // Scenario A: API Route (Mobile) - Check Authorization Header
+    if (request) {
+        const authHeader = request.headers.get('Authorization');
+        if (authHeader?.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            const payload = await verifyToken(token);
+            return payload?.userId || null;
+        }
     }
 
-    try {
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET_KEY)
-        const { payload } = await jwtVerify(token, secret)
-        
-        console.log("AUTH DEBUG: Verified User:", payload.userId);
-        return payload.userId as string
-    } catch (error) {
-        console.log("AUTH DEBUG: Token verification failed:", error);
-        return null
+    // Scenario B: Web Dashboard (Server Component) - Check Cookies
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('auth_token')?.value; // Or 'next-auth.session-token'
+    
+    if (sessionToken) {
+        const payload = await verifyToken(sessionToken);
+        return payload?.userId || null;
     }
+
+    return null;
 }
