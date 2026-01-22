@@ -47,6 +47,46 @@ export default function TransactionTable({ transactions }: { transactions: any[]
         alert("Tracking link saved!");
     };
 
+    // --- NEW: CSV DOWNLOAD LOGIC ---
+    const handleDownloadCSV = () => {
+        if (!selectedTx || !selectedTx.pendingTeamData) return;
+
+        try {
+            const data = JSON.parse(selectedTx.pendingTeamData);
+            
+            // 1. Create CSV Header and Rows
+            const csvRows = [];
+            csvRows.push(['Full Name', 'Email', 'Job Title', 'Note']); // Header
+
+            data.forEach((member: any) => {
+                const row = [
+                    `"${member.fullName}"`, // Quote strings to handle commas in names
+                    `"${member.email}"`,
+                    `"${member.jobTitle || ''}"`,
+                    `"${member.note || ''}"`
+                ];
+                csvRows.push(row.join(','));
+            });
+
+            // 2. Create Blob and Link
+            const csvString = csvRows.join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            a.href = url;
+            a.download = `manifest-${selectedTx.id}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error("Failed to generate CSV", error);
+            alert("Error generating CSV file.");
+        }
+    };
+
     return (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
@@ -65,12 +105,11 @@ export default function TransactionTable({ transactions }: { transactions: any[]
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                         {transactions.map((tx: Transaction) => {
+                            // ... (Existing mapping logic remains exactly the same) ...
                             const address = tx.shippingAddress ? JSON.parse(tx.shippingAddress) : {};
                             
-                            // Parse Design Logic (Shared)
                             let designPreview = null;
                             let designName = "Standard";
-                            let downloadUrl = null;
 
                             if (tx.cardDesign) {
                                 if (tx.cardDesign.startsWith('TEMPLATE:')) {
@@ -79,14 +118,12 @@ export default function TransactionTable({ transactions }: { transactions: any[]
                                     if (template) {
                                         designName = template.name;
                                         designPreview = template.image;
-                                        downloadUrl = template.image;
                                     }
                                 } else if (tx.cardDesign.startsWith('CUSTOM:')) {
                                     designName = "Custom Upload";
                                     const designData = tx.cardDesign.substring(7);
                                     if (designData.startsWith('data:image')) {
                                         designPreview = designData;
-                                        downloadUrl = designData;
                                     }
                                 }
                             }
@@ -94,20 +131,13 @@ export default function TransactionTable({ transactions }: { transactions: any[]
                             return (
                                 <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                     <td className="px-6 py-4">
-                                        {tx.isNew && (
-                                            <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm animate-pulse" title="New Transaction"></div>
-                                        )}
+                                        {tx.isNew && <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm animate-pulse"></div>}
                                     </td>
-                                    
                                     <td className="px-6 py-4">
                                         <div className="font-bold text-gray-900 dark:text-white">{tx.user.fullName}</div>
                                         <div className="text-xs text-gray-400">{tx.user.email}</div>
                                     </td>
-
-                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                                        {tx.plan?.name || "N/A"}
-                                    </td>
-                                    
+                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">{tx.plan?.name || "N/A"}</td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-6 rounded border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-100 flex items-center justify-center shrink-0">
@@ -122,13 +152,11 @@ export default function TransactionTable({ transactions }: { transactions: any[]
                                             </div>
                                         </div>
                                     </td>
-
                                     <td className="px-6 py-4">
                                         <div className="max-w-[120px] truncate text-xs text-gray-500" title={address.city}>
                                             {address.city ? `${address.city}, ${address.country}` : '-'}
                                         </div>
                                     </td>
-                                    
                                     <td className="px-6 py-4 text-right font-mono text-gray-700 dark:text-gray-300 text-xs">
                                         {tx.amount === 0 ? (
                                             <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">FREE</span>
@@ -136,7 +164,6 @@ export default function TransactionTable({ transactions }: { transactions: any[]
                                             `IDR ${tx.amount.toLocaleString('id-ID')}`
                                         )}
                                     </td>
-
                                     <td className="px-6 py-4">
                                         <select 
                                             value={tx.shipmentStatus}
@@ -155,7 +182,6 @@ export default function TransactionTable({ transactions }: { transactions: any[]
                                             <option value="ARRIVED">Arrived</option>
                                         </select>
                                     </td>
-                                    
                                     <td className="px-6 py-4 text-right">
                                         <button 
                                             onClick={() => handleOpenDetail(tx)}
@@ -189,14 +215,26 @@ export default function TransactionTable({ transactions }: { transactions: any[]
 
                         <div className="p-6 space-y-8">
                             
-                            {/* SHIPMENT MANIFEST */}
+                            {/* SHIPMENT MANIFEST (WITH DOWNLOAD BUTTON) */}
                             {selectedTx.pendingTeamData && (
                                 <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 p-4 rounded-xl">
-                                    <h3 className="text-sm font-bold text-blue-800 dark:text-blue-300 mb-3 flex items-center">
-                                        <i className="fa-solid fa-box-open mr-2"></i>
-                                        Pending Shipment Request
-                                    </h3>
-                                    <div className="space-y-2">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-bold text-blue-800 dark:text-blue-300 flex items-center">
+                                            <i className="fa-solid fa-box-open mr-2"></i>
+                                            Pending Shipment Request
+                                        </h3>
+                                        
+                                        {/* --- DOWNLOAD CSV BUTTON --- */}
+                                        <button 
+                                            onClick={handleDownloadCSV}
+                                            className="text-xs bg-white dark:bg-blue-900 text-blue-600 dark:text-blue-200 px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-700 font-bold hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center"
+                                        >
+                                            <i className="fa-solid fa-file-csv mr-2"></i>
+                                            Download CSV
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                                         {JSON.parse(selectedTx.pendingTeamData).map((item: any, idx: number) => (
                                             <div key={idx} className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-blue-200 dark:border-blue-800/50 flex justify-between items-center">
                                                 <div>
@@ -213,9 +251,9 @@ export default function TransactionTable({ transactions }: { transactions: any[]
                                 </div>
                             )}
 
-                            {/* 1. Plan & Design Info */}
+                            {/* Rest of the Modal (Plan, Design, Address, Tracking) */}
+                            {/* ... (This part remains exactly the same as your previous code) ... */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Plan Info */}
                                 <div className="space-y-4">
                                     <div>
                                         <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Plan</label>
@@ -228,9 +266,8 @@ export default function TransactionTable({ transactions }: { transactions: any[]
                                     </div>
                                 </div>
 
-                                {/* Design Info (NEW SECTION) */}
+                                {/* Design Info */}
                                 {(() => {
-                                    // Logic duplicated here for Modal Scope
                                     let modalDesignPreview = null;
                                     let modalDesignName = "Standard";
                                     let modalDownloadUrl = null;
@@ -273,7 +310,7 @@ export default function TransactionTable({ transactions }: { transactions: any[]
                                                             download={`design-${selectedTx.id}.png`}
                                                             className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
                                                         >
-                                                            <i className="fa-solid fa-download"></i> Download
+                                                            <i className="fa-solid fa-download"></i> Download Asset
                                                         </a>
                                                     ) : (
                                                         <span className="text-xs text-gray-400 italic mt-1 block">No asset available</span>
@@ -285,7 +322,7 @@ export default function TransactionTable({ transactions }: { transactions: any[]
                                 })()}
                             </div>
 
-                            {/* 2. Shipping Address */}
+                            {/* Shipping Address */}
                             <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
                                 <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center">
                                     <i className="fa-solid fa-location-dot mr-2 text-gray-400"></i>
@@ -305,7 +342,7 @@ export default function TransactionTable({ transactions }: { transactions: any[]
                                 )}
                             </div>
 
-                            {/* 3. Tracking Link */}
+                            {/* Tracking Link */}
                             <div>
                                 <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Tracking Information</label>
                                 <div className="flex gap-2">

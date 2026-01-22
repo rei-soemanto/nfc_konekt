@@ -155,26 +155,7 @@ export default function DynamicCardPreview({ data, templateUrl, templateId, onGe
                         </p>
                     </div>
                 </div>
-            </div>
-
-            {/* --- ACTION BUTTON --- */}
-            <div className="flex justify-center pt-2">
-                <button 
-                    onClick={handleGenerateImage}
-                    disabled={isGenerating}
-                    className="flex items-center gap-2 bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-purple-800"
-                >
-                    {isGenerating ? (
-                        <>
-                            <i className="fa-solid fa-circle-notch fa-spin"></i> Processing...
-                        </>
-                    ) : (
-                        <>
-                            <i className="fa-solid fa-check"></i> Confirm Design & Pay
-                        </>
-                    )}
-                </button>
-            </div>
+            </div>  
         </div>
     )
 }

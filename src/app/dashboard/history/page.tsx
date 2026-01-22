@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import HistoryTable from '@/components/ui/pages/dashboard/HistoryTable'
+import HistoryTable from '@/components/ui/pages/history/HistoryTable'
 
 export default async function HistoryPage() {
     const userId = await getAuthUserId();
