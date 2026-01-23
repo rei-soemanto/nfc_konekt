@@ -1,63 +1,80 @@
 import { prisma } from '@/lib/prisma'
-import { DiscountType, PromoCode, Prisma } from '@prisma/client' // 1. Import Prisma namespace
+
+type PriceBreakdown = {
+    planId: string
+    planCategory: string
+    basePrice: number
+    expansionPrice: number
+}
 
 export class PromoService {
     // 1. Create Object
-    static async create(data: Omit<PromoCode, 'id' | 'createdAt' | 'updatedAt' | 'usageCount'>) {
+    static async create(data: any) {
         return await prisma.promoCode.create({
             data: {
                 ...data,
-                // 2. FIX: Cast the JSON field explicitly to InputJsonValue
-                applicablePlans: data.applicablePlans as Prisma.InputJsonValue,
+                applicablePlans: data.applicablePlans, // Assumes InputJsonValue is handled
                 code: data.code.toUpperCase().trim()
             }
         });
     }
 
-    // 2. Fetch All Objects
+    // 2. Fetch All
     static async getAll() {
-        return await prisma.promoCode.findMany({
-            orderBy: { createdAt: 'desc' }
-        });
+        return await prisma.promoCode.findMany({ orderBy: { createdAt: 'desc' } });
     }
 
-    // 3. Encapsulated Toggle Logic
+    // 3. Toggle
     static async toggleStatus(id: string, isActive: boolean) {
-        return await prisma.promoCode.update({
-            where: { id },
-            data: { isActive }
-        });
+        return await prisma.promoCode.update({ where: { id }, data: { isActive } });
     }
 
-    // 4. Validation Logic (The "Brain")
-    static async validate(code: string, planCategory: string, price: number) {
+    // 4. SMART CALCULATION LOGIC
+    static async calculateDiscount(code: string, breakdown: PriceBreakdown) {
         const promo = await prisma.promoCode.findUnique({
             where: { code: code.toUpperCase() }
         });
 
         if (!promo || !promo.isActive) return { valid: false, error: "Invalid or inactive code" };
-        
+
         // Date Check
         const now = new Date();
         if (now < promo.startDate || now > promo.endDate) return { valid: false, error: "Promo expired" };
 
-        // Plan Check
-        // We cast this to string[] because we know that's how we save it
-        const plans = promo.applicablePlans as unknown as string[];
-        
-        if (!plans.includes(planCategory) && !plans.includes('ALL')) {
-            return { valid: false, error: "Not applicable for this plan" };
+        const applicablePlans = promo.applicablePlans as string[]; // e.g. ['CORPORATE', 'EXPANSION']
+        const appliesToAll = applicablePlans.includes('ALL');
+
+        // --- CALCULATE ELIGIBLE AMOUNT ---
+        let eligibleAmount = 0;
+
+        // A. Base Plan Eligibility
+        if (appliesToAll || applicablePlans.includes(breakdown.planCategory)) {
+            eligibleAmount += breakdown.basePrice;
         }
 
-        // Calculate
-        const discount = promo.type === 'PERCENTAGE' 
-            ? (price * promo.value) / 100 
-            : promo.value;
+        // B. Expansion Eligibility
+        if (appliesToAll || applicablePlans.includes('EXPANSION')) {
+            eligibleAmount += breakdown.expansionPrice;
+        }
 
-        return { 
-            valid: true, 
-            discount: Math.min(discount, price), // Prevent negative total
-            promoId: promo.id 
+        if (eligibleAmount === 0) {
+            return { valid: false, error: "Promo not applicable to these items" };
+        }
+
+        // --- APPLY DISCOUNT ---
+        let discountValue = 0;
+        if (promo.type === 'PERCENTAGE') {
+            discountValue = (eligibleAmount * promo.value) / 100;
+        } else {
+            // Fixed amount: cannot exceed the eligible amount
+            discountValue = Math.min(promo.value, eligibleAmount);
+        }
+
+        return {
+            valid: true,
+            discount: discountValue, // The actual money saved
+            promoId: promo.id,
+            appliedTo: eligibleAmount
         };
     }
 }

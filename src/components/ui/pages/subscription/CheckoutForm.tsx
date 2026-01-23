@@ -144,8 +144,9 @@ export default function CheckoutForm({ userAddress, plan, expansionPacks, mode =
 
                 {/* ✅ 5. PROMO CODE COMPONENT */}
                 <PromoCodeInput 
-                    planCategory={mode === 'EXPANSION' ? 'EXPANSION' : plan.category}
-                    originalPrice={rawPrice}
+                    planId={plan.id}
+                    expansionPacks={expansionPacks}
+                    mode={mode}
                     onApply={(amt, code) => { setDiscount(amt); setActivePromo(code); }}
                     onRemove={() => { setDiscount(0); setActivePromo(''); }}
                 />

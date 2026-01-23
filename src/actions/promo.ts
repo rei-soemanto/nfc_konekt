@@ -1,28 +1,44 @@
 'use server'
 
 import { PromoService } from '@/services/PromoService'
+import { prisma } from '@/lib/prisma'
+import { DURATION_CONFIG } from '@/lib/plans'
+import { PlanDuration } from '@prisma/client'
 
-export async function verifyPromoCode(code: string, planCategory: string, currentPrice: number) {
+export async function verifyPromoCode(code: string, planId: string, expansionPacks: number, mode: 'NEW' | 'EXPANSION') {
     try {
-        // 1. Call the logic encapsulated in your Service Object
-        const result = await PromoService.validate(code, planCategory, currentPrice);
+        // 1. Fetch Plan Data Server-Side (Secure)
+        const plan = await prisma.plan.findUnique({ where: { id: planId } });
+        if (!plan) return { success: false, message: "Invalid Plan" };
 
-        // 2. Return a clean response to the client
+        // 2. Calculate Costs Internally
+        const durationInfo = DURATION_CONFIG[plan.duration as PlanDuration];
+        const monthMultiplier = durationInfo?.months || 1;
+        
+        // Cost Components
+        const basePrice = mode === 'EXPANSION' ? 0 : plan.price;
+        const expansionPrice = (plan.expansionPrice * monthMultiplier) * expansionPacks;
+
+        // 3. Call Service
+        const result = await PromoService.calculateDiscount(code, {
+            planId: plan.id,
+            planCategory: plan.category, // 'PERSONAL' or 'CORPORATE'
+            basePrice,
+            expansionPrice
+        });
+
         if (!result.valid) {
-            return { 
-                success: false, 
-                message: result.error || "Invalid promo code" 
-            };
+            return { success: false, message: result.error };
         }
 
         return { 
             success: true, 
-            discountAmount: result.discount, 
-            promoId: result.promoId 
+            discountAmount: result.discount,
+            message: "Code Applied"
         };
 
     } catch (error) {
-        console.error("Promo Action Error:", error);
-        return { success: false, message: "Server error validating code" };
+        console.error("Promo Verify Error:", error);
+        return { success: false, message: "Validation failed" };
     }
-}
+}   

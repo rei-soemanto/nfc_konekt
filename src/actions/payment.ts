@@ -9,7 +9,8 @@ import { DURATION_CONFIG } from '@/lib/plans'
 import { PromoService } from '@/services/PromoService'
 import bcrypt from 'bcryptjs'
 
-// Helper: Slug Generator
+// --- HELPER FUNCTIONS ---
+
 function generateSlug(name: string) {
     const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const suffix = randomBytes(3).toString('hex');
@@ -20,7 +21,6 @@ async function hashPassword(plain: string) {
     return await bcrypt.hash(plain, 10);
 }
 
-// Helper: Check Active Shipment (Returns string if error, null if ok)
 async function checkActiveShipment(userId: string) {
     const activeShipment = await prisma.transaction.findFirst({
         where: {
@@ -36,6 +36,8 @@ async function checkActiveShipment(userId: string) {
     return null;
 }
 
+// --- MAIN FUNCTIONS ---
+
 export async function createTransaction(planId: string, expansionPacks: number = 0, addressSnapshot: any = null, promoCode?: string) {
     try {
         const userId = await getAuthUserId();
@@ -49,17 +51,29 @@ export async function createTransaction(planId: string, expansionPacks: number =
 
         if (!user || !plan) return { error: "Invalid data" };
 
+        // 1. Calculate Costs
         const durationInfo = DURATION_CONFIG[plan.duration as PlanDuration];
         const monthMultiplier = durationInfo?.months || 1;
         const expansionMonthlyPrice = plan.expansionPrice;
+        
         const expansionTotalCost = expansionMonthlyPrice * monthMultiplier * expansionPacks;
-        let totalPrice = plan.price + expansionTotalCost;
+        const basePrice = plan.price;
+        
+        // Initial Total
+        let totalPrice = basePrice + expansionTotalCost;
 
+        // 2. Promo Logic
         let discountAmount = 0;
         let appliedPromoId = null;
 
         if (promoCode) {
-            const promoResult = await PromoService.validate(promoCode, plan.category, totalPrice);
+            const promoResult = await PromoService.calculateDiscount(promoCode, {
+                planId: plan.id,
+                planCategory: plan.category,
+                basePrice: basePrice,
+                expansionPrice: expansionTotalCost
+            });
+            
             if (promoResult.valid) {
                 discountAmount = promoResult.discount || 0;
                 appliedPromoId = promoResult.promoId;
@@ -72,7 +86,7 @@ export async function createTransaction(planId: string, expansionPacks: number =
         const cardDesign = user.tempDesignData || null;
         const orderId = `SUB-${randomUUID()}`;
 
-        // --- CASE 1: FREE TRANSACTION ---
+        // --- CASE A: FREE (100% Discount or Free Plan) ---
         if (totalPrice === 0) {
             const now = new Date();
             const endDate = new Date();
@@ -150,8 +164,9 @@ export async function createTransaction(planId: string, expansionPacks: number =
             return { status: 'free_activated', token: null };
         }
 
-        // --- CASE 2: MIDTRANS ---
+        // --- CASE B: PAID (Midtrans) ---
         const items = [{ id: plan.id, price: plan.price, quantity: 1, name: plan.name }];
+        
         if (expansionPacks > 0) {
             items.push({
                 id: `${plan.id}-EXP`,
@@ -160,6 +175,7 @@ export async function createTransaction(planId: string, expansionPacks: number =
                 name: `Expansion (+10 Users) - ${durationInfo.label}`
             });
         }
+        
         if (discountAmount > 0) {
             items.push({
                 id: 'DISCOUNT',
@@ -250,15 +266,26 @@ export async function createExpansionTransaction(planId: string, packsToAdd: num
 
         if (!user || !plan || !user.subscription) return { error: "Invalid data" };
 
+        // 1. Calculate Costs (Only for Expansion)
         const durationInfo = DURATION_CONFIG[plan.duration as PlanDuration];
         const monthMultiplier = durationInfo?.months || 1;
-        let totalCost = (plan.expansionPrice * monthMultiplier) * packsToAdd;
         
+        // FIX: Ensure we use the correct variable (packsToAdd)
+        const expansionTotalCost = (plan.expansionPrice * monthMultiplier) * packsToAdd;
+        
+        let totalCost = expansionTotalCost;
         let discountAmount = 0;
         let appliedPromoId = null;
 
+        // 2. Promo Logic
         if (promoCode) {
-            const promoResult = await PromoService.validate(promoCode, 'EXPANSION', totalCost);
+            const promoResult = await PromoService.calculateDiscount(promoCode, {
+                planId: plan.id,
+                planCategory: plan.category,
+                basePrice: 0, // FIX: Base price is 0 for expansion-only
+                expansionPrice: expansionTotalCost
+            });
+            
             if (promoResult.valid) {
                 discountAmount = promoResult.discount || 0;
                 appliedPromoId = promoResult.promoId;
@@ -271,7 +298,7 @@ export async function createExpansionTransaction(planId: string, packsToAdd: num
         const cardDesign = user.tempDesignData || null;
         const orderId = `EXP-${randomUUID()}`;
 
-        // FIX 1: Handle Free Expansion (100% Promo)
+        // --- CASE A: FREE EXPANSION ---
         if (totalCost === 0) {
             await prisma.transaction.create({
                 data: {
@@ -289,7 +316,7 @@ export async function createExpansionTransaction(planId: string, packsToAdd: num
                 }
             });
 
-            // Immediately apply benefits since it's free
+            // Apply benefits immediately
             await prisma.subscription.update({
                 where: { userId: userId },
                 data: {
@@ -310,7 +337,7 @@ export async function createExpansionTransaction(planId: string, packsToAdd: num
             return { status: 'free_activated', token: null };
         }
 
-        // --- Normal Paid Expansion Flow ---
+        // --- CASE B: PAID EXPANSION ---
         const items = [{
             id: `${plan.id}-EXP-ADD`,
             price: (plan.expansionPrice * monthMultiplier) * packsToAdd, 
@@ -319,7 +346,12 @@ export async function createExpansionTransaction(planId: string, packsToAdd: num
         }];
         
         if (discountAmount > 0) {
-            items.push({ id: 'DISCOUNT', price: -discountAmount, quantity: 1, name: `Promo: ${promoCode}` });
+            items.push({ 
+                id: 'DISCOUNT', 
+                price: -discountAmount, 
+                quantity: 1, 
+                name: `Promo: ${promoCode}` 
+            });
         }
 
         const parameters = {
@@ -364,7 +396,6 @@ export async function createExpansionTransaction(planId: string, packsToAdd: num
             });
         }
 
-        // FIX 2: Return status so frontend doesn't crash
         return { status: 'pending', token: transaction.token };
 
     } catch (error: any) {

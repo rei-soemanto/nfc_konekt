@@ -40,8 +40,10 @@ export default function SubscriptionInfo({ sub }: Props) {
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
             {/* Header */}
             <div className="p-8 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900">
-                <div className="flex justify-between items-start">
-                    <div>
+                {/* ✅ CHANGED: flex-col for mobile, md:flex-row for desktop */}
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6">
+                    
+                    <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{sub.planName}</h2>
                             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
@@ -63,7 +65,8 @@ export default function SubscriptionInfo({ sub }: Props) {
                     {!isExpired && !isCanceled && (
                         <Link 
                             href="/dashboard/subscription/payment"
-                            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center"
+                            /* ✅ CHANGED: w-full for mobile tap target, md:w-auto for desktop */
+                            className="w-full md:w-auto justify-center px-5 py-5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center"
                         >
                             <i className="fa-solid fa-arrow-up mr-2"></i>
                             Upgrade / Change Plan

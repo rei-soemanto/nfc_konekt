@@ -63,7 +63,7 @@ export default function PromoClientWrapper({ initialPromos }: { initialPromos: a
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <button 
                     onClick={handleCreate} 
-                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 flex items-center gap-2"
+                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg hover:shadow-indigo-800 transition-all active:scale-95 flex items-center gap-2"
                 >
                     <i className="fa-solid fa-plus"></i> Create Promo
                 </button>
