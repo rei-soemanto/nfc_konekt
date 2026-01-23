@@ -64,6 +64,11 @@ enum ShipmentStatus {
   ARRIVED       // Delivered
 }
 
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
 // --- MODELS ---
 
 model User {
@@ -264,6 +269,9 @@ model Transaction {
   cardDesign      String?  @db.LongText
   
   isNew           Boolean  @default(true) // For Admin Notification
+
+  promoCodeId     String?
+  discountApplied Float        @default(0)
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -285,4 +293,27 @@ model Contact {
   createdAt   DateTime @default(now())
 
   @@index([userId])
+}
+
+model PromoCode {
+  id              String       @id @default(cuid())
+  name            String       // Internal name (e.g., "Summer Sale 2026")
+  code            String       @unique // The code user types (e.g., "SUMMER50")
+  type            DiscountType
+  value           Float        // e.g., 50 (for 50%) or 10000 (for IDR 10k)
+  
+  // Constraints
+  startDate       DateTime
+  endDate         DateTime
+  isActive        Boolean      @default(true)
+  
+  // Logic: Array of Plan IDs or Categories this applies to. 
+  // Stored as JSON to allow flexibility (e.g., ["PERSONAL", "CORPORATE", "EXPANSION"])
+  applicablePlans Json?        
+
+  // Analytics
+  usageCount      Int          @default(0)
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }

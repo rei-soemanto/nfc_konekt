@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import CheckoutForm from '@/components/ui/pages/subscription/CheckoutForm'
+// FIX: Import from 'payment' folder where we created the new component with Promo logic
+import CheckoutForm from '@/components/ui/pages/subscription/CheckoutForm' 
 
 export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ planId: string, packs?: string, mode?: string }> }) {
     const userId = await getAuthUserId();
@@ -21,6 +22,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
     let userAddress = null;
     if (user?.address) {
         try {
+            // Handle both JSON string or Relation object depending on your DB schema
             userAddress = typeof user.address === 'string' ? JSON.parse(user.address) : user.address;
         } catch (e) {
             userAddress = null;

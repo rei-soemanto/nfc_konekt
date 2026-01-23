@@ -4,6 +4,7 @@ import { useState } from 'react'
 import AddressForm from '@/components/ui/pages/forms/AddressForm'
 import { createTransaction, createExpansionTransaction } from '@/actions/payment'
 import Script from 'next/script'
+import PromoCodeInput from './PromoCodeInput' 
 
 type Props = {
     userAddress: any
@@ -17,46 +18,76 @@ declare global { interface Window { snap: any; } }
 export default function CheckoutForm({ userAddress, plan, expansionPacks, mode = 'NEW' }: Props) {
     const [useSavedAddress, setUseSavedAddress] = useState(!!userAddress);
     const [loading, setLoading] = useState(false);
+    
+    // 1. ADD ERROR STATE
+    const [globalError, setGlobalError] = useState('');
 
-    // HELPER: Duration Multiplier
-    const isYearly = plan.duration === 'YEARLY';
-    const months = isYearly ? 12 : 1; // Adjust based on your DURATION_CONFIG logic if needed
-    // Or better, rely on what passed in plan if formatted, but raw plan usually needs helper.
-    // Assuming simple logic for now:
+    const [discount, setDiscount] = useState(0);
+    const [activePromo, setActivePromo] = useState('');
+
     const multiplier = plan.duration === 'YEARLY' ? 12 : (plan.duration === 'SIX_MONTHS' ? 6 : 1);
-
-    // 1. CALCULATE CORRECT PRICE
     const expansionCost = plan.expansionPrice * multiplier * expansionPacks;
     const baseCost = plan.price;
-    
-    const displayPrice = mode === 'EXPANSION' 
-        ? expansionCost 
-        : baseCost + expansionCost;
+    const rawPrice = mode === 'EXPANSION' ? expansionCost : (baseCost + expansionCost);
+    const finalPrice = Math.max(0, rawPrice - discount);
 
     const handlePayment = async (addressSnapshot: any) => {
+        // 🔒 SAFETY CHECK 1: Ensure Midtrans is ready
+        if (!window.snap) {
+            setGlobalError("Payment Gateway is still loading... please try again in 3 seconds.");
+            return;
+        }
+
         setLoading(true);
+        setGlobalError(''); 
+
         try {
-            let result;
+            // Explicitly type as 'any' to handle mixed return types
+            let result: any; 
             
             if (mode === 'EXPANSION') {
-                // Charge ONLY Expansion
-                result = await createExpansionTransaction(plan.id, expansionPacks, addressSnapshot);
+                result = await createExpansionTransaction(plan.id, expansionPacks, addressSnapshot, activePromo);
             } else {
-                // Charge Base + Expansion
-                result = await createTransaction(plan.id, expansionPacks, addressSnapshot);
+                result = await createTransaction(plan.id, expansionPacks, addressSnapshot, activePromo);
             }
 
-            if (result.token && window.snap) {
+            // 2. CHECK FOR SERVER ERROR
+            if (result.error) {
+                setGlobalError(result.error);
+                setLoading(false); // Stop loading!
+                window.scrollTo({ top: 0, behavior: 'smooth' }); 
+                return;
+            }
+
+            // 3. HANDLE FREE ACTIVATION
+            if (result.status === 'free_activated') {
+                window.location.href = '/dashboard/subscription/status';
+                return;
+            }
+
+            // 4. HANDLE MIDTRANS POPUP
+            if (result.token) {
                 window.snap.pay(result.token, {
                     onSuccess: () => window.location.href = '/dashboard/subscription/status',
                     onPending: () => window.location.href = '/dashboard/subscription/status',
-                    onError: () => alert("Payment failed")
+                    onError: () => {
+                        setGlobalError("Payment failed or was declined.");
+                        setLoading(false);
+                    },
+                    // 🔒 SAFETY CHECK 2: Handle Popup Close
+                    onClose: () => {
+                        setGlobalError("You closed the payment popup.");
+                        setLoading(false); // Stop loading if they close it!
+                    }
                 });
+            } else {
+                setGlobalError("Unexpected response from server.");
+                setLoading(false);
             }
-        } catch (error) {
+
+        } catch (error: any) {
             console.error(error);
-            alert("Transaction failed");
-        } finally {
+            setGlobalError("An unexpected error occurred. Please try again.");
             setLoading(false);
         }
     };
@@ -65,10 +96,23 @@ export default function CheckoutForm({ userAddress, plan, expansionPacks, mode =
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <Script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY} strategy="lazyOnload" />
 
+            {/* LEFT COLUMN */}
             <div className="md:col-span-2 space-y-6">
-                {/* Toggle Address Logic */}
+                
+                {/* 3. SHOW ERROR POP-UP / ALERT */}
+                {globalError && (
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-3 animate-fade-in">
+                        <i className="fa-solid fa-circle-exclamation text-red-600 dark:text-red-400 mt-1"></i>
+                        <div>
+                            <h4 className="font-bold text-red-600 dark:text-red-400 text-sm">Notice</h4>
+                            <p className="text-red-600 dark:text-red-400 text-sm mt-1">{globalError}</p>
+                        </div>
+                    </div>
+                )}
+                
+                {/* --- ADDRESS SECTION --- */}
                 {userAddress && (
-                    <div className="p-4 border rounded-xl bg-white dark:bg-gray-900 flex items-center justify-between cursor-pointer" onClick={() => setUseSavedAddress(true)}>
+                    <div className={`p-4 border rounded-xl bg-white dark:bg-gray-900 flex items-center justify-between cursor-pointer transition-colors ${useSavedAddress ? 'border-indigo-600 bg-indigo-50/10' : 'border-gray-200 dark:border-gray-800'}`} onClick={() => setUseSavedAddress(true)}>
                         <div className="flex items-center gap-3">
                             <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${useSavedAddress ? 'border-indigo-600' : 'border-gray-400'}`}>
                                 {useSavedAddress && <div className="w-3 h-3 bg-indigo-600 rounded-full"></div>}
@@ -81,7 +125,7 @@ export default function CheckoutForm({ userAddress, plan, expansionPacks, mode =
                     </div>
                 )}
 
-                <div className={`p-4 border rounded-xl bg-white dark:bg-gray-900 ${!useSavedAddress ? 'ring-2 ring-indigo-500' : ''}`}>
+                <div className={`p-4 border rounded-xl bg-white dark:bg-gray-900 ${!useSavedAddress ? 'ring-2 ring-indigo-500 border-indigo-500' : 'border-gray-200 dark:border-gray-800'}`}>
                     <div className="flex items-center gap-3 mb-4 cursor-pointer" onClick={() => setUseSavedAddress(false)}>
                         <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${!useSavedAddress ? 'border-indigo-600' : 'border-gray-400'}`}>
                             {!useSavedAddress && <div className="w-3 h-3 bg-indigo-600 rounded-full"></div>}
@@ -92,57 +136,76 @@ export default function CheckoutForm({ userAddress, plan, expansionPacks, mode =
                     {!useSavedAddress && (
                         <AddressForm 
                             initialData={null}
-                            buttonText="Proceed to Payment"
-                            onSave={() => { /* Handled by parent logic usually or internal state */ }}
+                            buttonText="Proceed" 
+                            onSave={() => {}} 
                         />
                     )}
                 </div>
+
+                {/* ✅ 5. PROMO CODE COMPONENT */}
+                <PromoCodeInput 
+                    planCategory={mode === 'EXPANSION' ? 'EXPANSION' : plan.category}
+                    originalPrice={rawPrice}
+                    onApply={(amt, code) => { setDiscount(amt); setActivePromo(code); }}
+                    onRemove={() => { setDiscount(0); setActivePromo(''); }}
+                />
+
             </div>
 
-            {/* SUMMARY SECTION */}
+            {/* RIGHT COLUMN: Order Summary */}
             <div className="md:col-span-1">
-                <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl sticky top-6">
-                    <h3 className="font-bold text-lg mb-4">Order Summary</h3>
+                <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl sticky top-6 border border-gray-100 dark:border-gray-700">
+                    <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white">Order Summary</h3>
                     
-                    {/* 2. DYNAMIC LABEL & PRICE */}
-                    <div className="flex justify-between mb-2">
-                        <span className="font-medium">
-                            {mode === 'EXPANSION' ? 'Additional Packs' : plan.name}
-                        </span>
-                        <span className="font-bold text-indigo-600">
-                            IDR {displayPrice.toLocaleString('id-ID')}
-                        </span>
+                    <div className="space-y-3 mb-4">
+                        <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                            <span>{mode === 'EXPANSION' ? 'Expansion Pack' : plan.name}</span>
+                            <span>IDR {rawPrice.toLocaleString('id-ID')}</span>
+                        </div>
+                        
+                        {/* ✅ 6. SHOW DISCOUNT IN SUMMARY */}
+                        {discount > 0 && (
+                            <div className="flex justify-between text-sm text-green-600 font-medium animate-pulse">
+                                <span>Discount ({activePromo})</span>
+                                <span>- IDR {discount.toLocaleString('id-ID')}</span>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Breakdown Details */}
-                    {mode !== 'EXPANSION' && expansionPacks > 0 && (
-                        <div className="flex justify-between mb-2 text-sm text-gray-500">
-                            <span>Includes Expansion x{expansionPacks}</span>
-                            <span>Included</span>
-                        </div>
-                    )}
+                    <div className="border-t border-gray-200 dark:border-gray-700 my-4"></div>
                     
-                    {mode === 'EXPANSION' && (
-                        <div className="text-xs text-gray-500 mt-2 border-t pt-2">
-                            Adding <strong>{expansionPacks} pack(s)</strong> to your existing plan.
+                    <div className="flex justify-between items-end mb-6">
+                        <span className="font-bold text-gray-900 dark:text-white">Total Pay</span>
+                        <div className="text-right">
+                            {discount > 0 && (
+                                <span className="block text-xs text-gray-400 line-through">
+                                    IDR {rawPrice.toLocaleString('id-ID')}
+                                </span>
+                            )}
+                            <span className="font-bold text-2xl text-indigo-600">
+                                IDR {finalPrice.toLocaleString('id-ID')}
+                            </span>
                         </div>
-                    )}
-
-                    <div className="border-t my-4"></div>
+                    </div>
                     
-                    {useSavedAddress ? (
-                        <button 
-                            onClick={() => handlePayment(userAddress)}
-                            disabled={loading}
-                            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg"
-                        >
-                            {loading ? 'Processing...' : `Pay IDR ${displayPrice.toLocaleString('id-ID')}`}
-                        </button>
-                    ) : (
-                        <p className="text-xs text-center text-gray-500">
-                            Select an address to continue.
-                        </p>
-                    )}
+                    <button 
+                        onClick={() => handlePayment(userAddress)}
+                        disabled={loading || (!useSavedAddress && !userAddress)} 
+                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 disabled:opacity-70 disabled:active:scale-100"
+                    >
+                        {loading ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <i className="fa-solid fa-circle-notch fa-spin"></i> Processing...
+                            </span>
+                        ) : (
+                            `Pay IDR ${finalPrice.toLocaleString('id-ID')}`
+                        )}
+                    </button>
+                    
+                    <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400">
+                        <i className="fa-solid fa-lock"></i>
+                        <span>Secure Payment by Midtrans</span>
+                    </div>
                 </div>
             </div>
         </div>

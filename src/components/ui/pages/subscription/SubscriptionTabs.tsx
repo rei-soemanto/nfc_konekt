@@ -28,18 +28,14 @@ export default function SubscriptionTabs({ plans, userId }: { plans: any[], user
         if (!selectedPlan) return;
         setLoading(selectedPlan.id);
         
-        // CASE A: Corporate New Plan
+        // CASE A: Corporate (Go to Team Setup first)
         if (activeTab === 'CORPORATE') {
-             // If purchasing expansion packs (even if 0 for base plan setup), go to setup
             router.push(`/dashboard/subscription/team-setup?planId=${selectedPlan.id}&packs=${expansionPacks}`);
         } 
-        // CASE B: Expansion Only (if we had a separate button for just expansion, but here we assume full flow)
-        // Since you asked for "Parent User Purchase Expansion Pack", this usually happens in a separate context? 
-        // If this component handles UPGRADES too, the logic is fine.
-        
-        // CASE C: Personal
+        // CASE B: Personal (Stay on PAYMENT page, but add params to trigger CheckoutForm)
         else {
-            router.push(`/dashboard/subscription/checkout?planId=${selectedPlan.id}&packs=${expansionPacks}`);
+            // ✅ FIX: Point this to 'payment', not 'checkout'
+            router.push(`/dashboard/subscription/payment?planId=${selectedPlan.id}&packs=${expansionPacks}`);
         }
     };
 

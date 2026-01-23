@@ -83,6 +83,13 @@ export function Sidebar({ user, newTxCount = 0 }: { user: UserProps, newTxCount?
                 href: '/dashboard/admin/plans',
                 icon: 'fa-list-check' 
             },
+            // --- NEW PROMO MENU ---
+            {
+                name: 'Promo Codes',
+                href: '/dashboard/admin/promos',
+                icon: 'fa-tags' 
+            },
+            // ----------------------
             {
                 name: 'Manage Users',
                 href: '/dashboard/admin/users',

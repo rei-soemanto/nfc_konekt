@@ -139,7 +139,7 @@ export function Navbar() {
                         <div className="pl-4">
                             <Link 
                                 href="/auth" 
-                                className={`font-medium rounded-full hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-md shadow-indigo-200 dark:shadow-none hover:shadow-lg ${
+                                className={`font-medium rounded-full hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-md shadow-indigo-700 dark:shadow-none hover:shadow-lg ${
                                     isScrolled 
                                         ? 'px-6 py-2.5 bg-indigo-600 text-white text-sm'  // Compact Button
                                         : 'px-8 py-3 bg-indigo-600 text-white text-base'   // Larger Button at Top
