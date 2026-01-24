@@ -10,6 +10,7 @@ type Props = {
         startDate: string
         endDate: string
         expansionPacks: number
+        planId: string // ✅ Passed from page.tsx
         planName: string
         planPrice: number
         planDurationLabel: string
@@ -40,7 +41,6 @@ export default function SubscriptionInfo({ sub }: Props) {
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
             {/* Header */}
             <div className="p-8 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900">
-                {/* ✅ CHANGED: flex-col for mobile, md:flex-row for desktop */}
                 <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6">
                     
                     <div className="flex-1">
@@ -62,22 +62,37 @@ export default function SubscriptionInfo({ sub }: Props) {
                         </p>
                     </div>
                     
-                    {!isExpired && !isCanceled && (
-                        <Link 
-                            href="/dashboard/subscription/payment"
-                            /* ✅ CHANGED: w-full for mobile tap target, md:w-auto for desktop */
-                            className="w-full md:w-auto justify-center px-5 py-5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center"
-                        >
-                            <i className="fa-solid fa-arrow-up mr-2"></i>
-                            Upgrade / Change Plan
-                        </Link>
-                    )}
+                    {/* ACTION BUTTONS */}
+                    <div className="flex flex-col gap-3 w-full md:w-auto">
+                        
+                        {/* 1. RENEW BUTTON (Visible if Active or Expired, but not canceled) */}
+                        {!isCanceled && (
+                            <Link 
+                                // ✅ FIX: Added '&mode=renew' so Payment Page knows it's a renewal
+                                href={`/dashboard/subscription/payment?planId=${sub.planId}&mode=renew`}
+                                className="w-full md:w-auto justify-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center"
+                            >
+                                <i className="fa-solid fa-rotate mr-2"></i>
+                                Renew Subscription
+                            </Link>
+                        )}
+
+                        {/* 2. UPGRADE BUTTON (Secondary Style) */}
+                        {!isExpired && !isCanceled && (
+                            <Link 
+                                href="/dashboard/subscription/payment"
+                                className="w-full md:w-auto justify-center px-5 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center"
+                            >
+                                <i className="fa-solid fa-arrow-up mr-2"></i>
+                                Change Plan
+                            </Link>
+                        )}
+                    </div>
                 </div>
             </div>
 
             {/* Content Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
-                
                 {/* Left: Usage & Timeline */}
                 <div className="space-y-6">
                     <div>
@@ -186,7 +201,7 @@ export default function SubscriptionInfo({ sub }: Props) {
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Cancel Subscription?</h3>
                             <p className="text-gray-500 dark:text-gray-400 text-sm">
-                                Your subscription will remain active until <strong>{sub.endDate}</strong>. After that, your features will be locked immediately. There is no grace period.
+                                Your subscription will remain active until <strong>{sub.endDate}</strong>. After that, your features will be locked immediately.
                             </p>
                         </div>
                         

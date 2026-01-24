@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import SubscriptionInfo from '@/components/ui/pages/subscription/SubscriptionInfo'
 import ShipmentTracker from '@/components/ui/pages/subscription/ShipmentTracker'
 import { DURATION_CONFIG } from '@/lib/plans'
+import { PlanDuration } from '@prisma/client'
 
 export default async function SubscriptionStatusPage() {
     const userId = await getAuthUserId();
@@ -24,7 +25,7 @@ export default async function SubscriptionStatusPage() {
     // 1. Team Member View
     if (user.parentId && user.parent?.subscription) {
         return (
-            <div className="max-w-4xl mx-auto py-8">
+            <div className="max-w-4xl mx-auto py-8 px-4">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Subscription Status</h1>
                 <div className="bg-white dark:bg-gray-900 rounded-xl border border-indigo-200 dark:border-indigo-900 p-8 shadow-sm">
                     <div className="flex items-center gap-4 mb-4">
@@ -32,7 +33,7 @@ export default async function SubscriptionStatusPage() {
                             <i className="fa-solid fa-users-viewfinder text-xl"></i>
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold">Team Plan Active</h2>
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Team Plan Active</h2>
                             <p className="text-sm text-gray-500">Managed by {user.parent.fullName}</p>
                         </div>
                     </div>
@@ -44,7 +45,7 @@ export default async function SubscriptionStatusPage() {
     // 2. No Subscription View
     if (!user.subscription || !user.subscription.plan) {
         return (
-             <div className="max-w-3xl mx-auto p-12 text-center mt-10 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+            <div className="max-w-3xl mx-auto p-12 text-center mt-10 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
                 <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
                     <i className="fa-regular fa-credit-card text-2xl"></i>
                 </div>
@@ -57,48 +58,48 @@ export default async function SubscriptionStatusPage() {
         )
     }
 
-    // 3. FETCH LATEST ACTIVE SHIPMENT
-    // We specifically look for Processing or Shipping states.
+    // 3. Data Fetching
+    // ✅ FIX: Exclude 'RENEW' type from Shipment Tracker query
     const activeShipment = await prisma.transaction.findFirst({
         where: { 
             userId: userId,
             status: 'PAID',
-            shipmentStatus: { in: ['PROCESSING', 'SHIPPING'] }
+            shipmentStatus: { in: ['PROCESSING', 'SHIPPING'] },
+            type: { not: 'RENEW' } // <--- This line hides the tracker for renewals
         },
         orderBy: { createdAt: 'desc' }
     });
 
-    // 4. FETCH TRANSACTION HISTORY
     const history = await prisma.transaction.findMany({
         where: { 
             userId: userId,
-            status: 'PAID' // Only confirmed
+            status: 'PAID'
         },
         orderBy: { createdAt: 'desc' },
         include: { plan: true }
     });
 
-    // Data Prep
+    // 4. Data Processing
     const sub = user.subscription;
     const plan = sub.plan;
-    // @ts-ignore
-    const durationInfo = DURATION_CONFIG[plan.duration] || { label: 'Unknown', months: 1 };
+    const durationInfo = DURATION_CONFIG[plan.duration as PlanDuration] || { label: 'Unknown', months: 1 };
 
-    // CALCULATE PROGRESS
+    // Calculate Progress
     const now = new Date();
     const start = new Date(sub.startDate);
     const end = new Date(sub.endDate);
     
     const totalDuration = end.getTime() - start.getTime();
     const elapsed = now.getTime() - start.getTime();
-    
     let percentage = 0;
+    
     if (totalDuration > 0) {
         percentage = (elapsed / totalDuration) * 100;
     }
     percentage = Math.min(Math.max(percentage, 0), 100);
 
     const formattedData = {
+        planId: plan.id, 
         status: sub.status,
         startDate: new Date(sub.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
         endDate: new Date(sub.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
@@ -110,7 +111,7 @@ export default async function SubscriptionStatusPage() {
         currency: 'IDR',
         nextBillAmount: plan.price + (plan.expansionPrice * durationInfo.months * sub.expansionPacks),
         nextBillDate: new Date(sub.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-        remainingDays: Math.max(0, Math.ceil((new Date(sub.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))),
+        remainingDays: Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))),
         progressPercentage: percentage 
     };
 
@@ -123,13 +124,14 @@ export default async function SubscriptionStatusPage() {
             
             <SubscriptionInfo sub={formattedData} />
 
-            {/* TRACKING SECTION */}
-            <ShipmentTracker 
-                // @ts-ignore
-                status={activeShipment ? activeShipment.shipmentStatus : 'ARRIVED'} 
-                trackingLink={activeShipment?.trackingLink}
-                transactionId={activeShipment?.id}
-            />
+            {/* TRACKING SECTION (Will only render if activeShipment exists) */}
+            {activeShipment && (
+                <ShipmentTracker 
+                    status={activeShipment.shipmentStatus as any} 
+                    trackingLink={activeShipment.trackingLink}
+                    transactionId={activeShipment.id}
+                />
+            )}
 
             {/* TRANSACTION HISTORY */}
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
@@ -149,6 +151,7 @@ export default async function SubscriptionStatusPage() {
                                     'bg-indigo-100 text-indigo-600'
                                 }`}>
                                     <i className={`fa-solid ${
+                                        tx.type === 'RENEW' ? 'fa-rotate' : 
                                         tx.shipmentStatus === 'ARRIVED' ? 'fa-check' :
                                         tx.shipmentStatus === 'SHIPPING' ? 'fa-truck-fast' :
                                         'fa-receipt'
@@ -156,8 +159,12 @@ export default async function SubscriptionStatusPage() {
                                 </div>
                                 <div>
                                     <p className="font-bold text-gray-900 dark:text-white text-sm">
-                                        {tx.type === 'NEW' ? 'Subscription Plan' : 
-                                        tx.type === 'EXPANSION' ? 'Expansion Pack' : 'Shipment Request'}
+                                        {
+                                            tx.type === 'NEW' ? 'Subscription Plan' : 
+                                            tx.type === 'EXPANSION' ? 'Expansion Pack' : 
+                                            tx.type === 'RENEW' ? 'Subscription Renewal' : 
+                                            'Transaction'
+                                        }
                                     </p>
                                     <p className="text-xs text-gray-500">
                                         {new Date(tx.createdAt).toLocaleDateString('id-ID', { dateStyle: 'medium' })} • 
@@ -167,13 +174,17 @@ export default async function SubscriptionStatusPage() {
                             </div>
                             
                             <div className="flex items-center gap-4 text-sm">
-                                <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                    tx.shipmentStatus === 'ARRIVED' ? 'bg-green-100 text-green-700' :
-                                    tx.shipmentStatus === 'SHIPPING' ? 'bg-blue-100 text-blue-700' :
-                                    'bg-gray-100 text-gray-600'
-                                }`}>
-                                    {tx.shipmentStatus}
-                                </span>
+                                {/* Only show shipment status if it's NOT a renewal */}
+                                {tx.type !== 'RENEW' && (
+                                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                        tx.shipmentStatus === 'ARRIVED' ? 'bg-green-100 text-green-700' :
+                                        tx.shipmentStatus === 'SHIPPING' ? 'bg-blue-100 text-blue-700' :
+                                        'bg-gray-100 text-gray-600'
+                                    }`}>
+                                        {tx.shipmentStatus}
+                                    </span>
+                                )}
+                                
                                 <span className="font-mono font-bold text-gray-700 dark:text-gray-300">
                                     IDR {tx.amount.toLocaleString('id-ID')}
                                 </span>
