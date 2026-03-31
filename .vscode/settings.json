@@ -1,4 +1,5 @@
 {
     "WillLuke.nextjs.hasPrompted": true,
-    "files.autoSave": "afterDelay"
+    "files.autoSave": "afterDelay",
+    "prisma.pinToPrisma6": true
 }
