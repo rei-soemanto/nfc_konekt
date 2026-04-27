@@ -7,9 +7,12 @@ export async function GET(req: Request) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {
-        const status = await SubscriptionService.getStatus(userId);
-        return NextResponse.json({ success: true, data: status });
+        const [status, transactions] = await Promise.all([
+            SubscriptionService.getStatus(userId),
+            SubscriptionService.getTransactionHistory(userId)
+        ]);
+        return NextResponse.json({ success: true, data: { ...status, transactions } });
     } catch (error) {
         return NextResponse.json({ error: "Internal Error" }, { status: 500 });
     }
-}
+}

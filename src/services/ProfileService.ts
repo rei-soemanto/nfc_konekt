@@ -9,7 +9,6 @@ export class ProfileService {
             where: { id: userId },
             include: {
                 address: true,
-                // Include subscription to check if they are allowed to edit Corporate info
                 subscription: { include: { plan: true } }
             }
         });
@@ -22,16 +21,21 @@ export class ProfileService {
         return await prisma.user.update({
             where: { id: userId },
             data: {
-                fullName: data.fullName,
-                phone: data.phone,
-                bio: data.bio,
-                jobTitle: data.jobTitle,
-                // Handle Social Links if you send them as an array, 
-                // or handle them in a separate method depending on your UI
-                socialLinks: data.socialLinks ? {
-                    deleteMany: {}, // Clear old
-                    create: data.socialLinks // Add new
-                } : undefined
+                // By using the spread operator, we only attempt to update fields 
+                // that were actually sent in the payload and aren't explicitly null
+                ...(data.fullName != null && { fullName: data.fullName }),
+                ...(data.phone != null && { phone: data.phone }),
+                ...(data.bio != null && { bio: data.bio }),
+                ...(data.jobTitle != null && { jobTitle: data.jobTitle }),
+                ...(data.companyWebsite != null && { companyWebsite: data.companyWebsite }),
+                
+                // Clear old and add new
+                ...(data.socialLinks && {
+                    socialLinks: {
+                        deleteMany: {}, 
+                        create: data.socialLinks 
+                    }
+                })
             }
         });
     }
@@ -43,19 +47,20 @@ export class ProfileService {
         return await prisma.address.upsert({
             where: { userId: userId },
             update: {
-                street: data.street,
-                city: data.city,
-                region: data.region,
-                country: data.country,
-                postalCode: data.postalCode
+                ...(data.street != null && { street: data.street }),
+                ...(data.city != null && { city: data.city }),
+                ...(data.region != null && { region: data.region }),
+                ...(data.country != null && { country: data.country }),
+                ...(data.postalCode != null && { postalCode: data.postalCode })
             },
             create: {
                 userId: userId,
-                street: data.street,
-                city: data.city,
-                region: data.region,
-                country: data.country,
-                postalCode: data.postalCode
+                // Fallbacks to empty string if creating for the first time and data is missing
+                street: data.street || "",
+                city: data.city || "",
+                region: data.region || "",
+                country: data.country || "",
+                postalCode: data.postalCode || ""
             }
         });
     }
@@ -65,7 +70,6 @@ export class ProfileService {
      * (Only for Corporate Admins)
      */
     static async updateCorporate(userId: string, data: any) {
-        // Verify User is Corporate Admin
         const user = await prisma.user.findUnique({ 
             where: { id: userId },
             include: { subscription: { include: { plan: true } } }
@@ -77,18 +81,15 @@ export class ProfileService {
             throw new Error("Unauthorized: Corporate Plan required");
         }
 
-        // Update Company Details
-        // This updates the Admin's record, which child employees inherit 'companyName' from usually,
-        // or you might want to push updates to children (optional complexity)
         return await prisma.user.update({
             where: { id: userId },
             data: {
-                companyName: data.companyName,
-                companyWebsite: data.companyWebsite,
-                companyDescription: data.companyDescription,
-                companyScope: data.companyScope,
-                companySpeciality: data.companySpeciality,
-                isCompanyPublic: data.isCompanyPublic
+                ...(data.companyName != null && { companyName: data.companyName }),
+                ...(data.companyWebsite != null && { companyWebsite: data.companyWebsite }),
+                ...(data.companyDescription != null && { companyDescription: data.companyDescription }),
+                ...(data.companyScope != null && { companyScope: data.companyScope }),
+                ...(data.companySpeciality != null && { companySpeciality: data.companySpeciality }),
+                ...(data.isCompanyPublic != null && { isCompanyPublic: data.isCompanyPublic })
             }
         });
     }

@@ -41,7 +41,6 @@ export class ContactService {
                 phone: true,
                 jobTitle: true,
                 company: true,
-                avatarUrl: false,
                 notes: false
             }
         });
