@@ -9,7 +9,8 @@ export class ProfileService {
             where: { id: userId },
             include: {
                 address: true,
-                subscription: { include: { plan: true } }
+                subscription: { include: { plan: true } },
+                socialLinks: true
             }
         });
     }
