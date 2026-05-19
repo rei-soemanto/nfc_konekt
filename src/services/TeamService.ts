@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-import { EXPANSION_PACK_SIZE } from '@/lib/plans' // Ensure this exists or use number 10
+import { EXPANSION_PACK_SIZE } from '@/config/plans' // Ensure this exists or use number 10
 
 export class TeamService {
     /**

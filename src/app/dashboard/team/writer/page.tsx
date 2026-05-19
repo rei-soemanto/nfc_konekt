@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import NFCWriterClient from '@/components/ui/pages/team/NFCWriterClient'
+import NFCWriterClient from '@/features/team/NFCWriterClient'
 
 export default async function TeamWriterPage() {
     const userId = await getAuthUserId();

@@ -65,7 +65,7 @@ export class CardService {
         // 2. Fetch the Requester to check Roles
         const requester = await prisma.user.findUnique({ 
             where: { id: requesterId },
-            select: { id: true, role: true, planCategory: true } 
+            select: { id: true, role: true } 
         });
 
         if (!requester) throw new Error("User not found");

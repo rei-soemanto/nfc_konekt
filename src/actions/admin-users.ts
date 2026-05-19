@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getAdminData } from '@/actions/admin' 
 import { revalidatePath } from 'next/cache'
 import { UserStatus, SubscriptionStatus, CardStatus } from '@prisma/client'
-import { DURATION_CONFIG } from '@/lib/plans'
+import { DURATION_CONFIG } from '@/config/plans'
 
 // 1. Fetch All Users with Relations
 export async function getAllUsers() {

@@ -1,4 +1,4 @@
-import { Sidebar } from '@/components/ui/layout/Sidebar' // Check your import path
+import { Sidebar } from '@/components/layout/Sidebar' // Check your import path
 import { getAuthUserId } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'

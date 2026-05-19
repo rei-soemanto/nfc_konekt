@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { updateCompanyProfile } from '@/actions/corporate'
 import Select from 'react-select'
-import { INDUSTRY_OPTIONS, SPECIALITY_OPTIONS } from '@/lib/company-options' // <--- Import from Lib
+import { INDUSTRY_OPTIONS, SPECIALITY_OPTIONS } from '@/config/company-options' // <--- Import from Lib
 
 type Props = {
     initialData: {

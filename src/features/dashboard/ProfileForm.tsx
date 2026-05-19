@@ -2,8 +2,8 @@
 
 import { useActionState, useState, useRef } from 'react'
 import { updateProfile } from '@/actions/profile'
-import { Input } from '@/components/common/Input'
-import { SubmitButton } from '@/components/common/Button'
+import { Input } from '@/components/ui/Input'
+import { SubmitButton } from '@/components/ui/Button'
 import { SocialLinksEditor } from './SocialLinksEditor'
 
 interface UserProfileData {

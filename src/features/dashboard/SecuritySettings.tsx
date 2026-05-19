@@ -2,8 +2,8 @@
 
 import { useActionState, useState } from 'react'
 import { changePassword, deleteAccount } from '@/actions/account'
-import { Input } from '@/components/common/Input'
-import { SubmitButton } from '@/components/common/Button'
+import { Input } from '@/components/ui/Input'
+import { SubmitButton } from '@/components/ui/Button'
 
 export default function SecuritySettings() {
     const [pwdState, pwdAction] = useActionState(changePassword, undefined);

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { EXPANSION_PACK_SIZE } from '@/lib/plans'
+import { EXPANSION_PACK_SIZE } from '@/config/plans'
 
 type Props = {
     planId: string

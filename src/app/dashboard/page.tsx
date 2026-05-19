@@ -1,8 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
-import StatsGrid from '@/components/ui/pages/dashboard/StatsGrid'
-import RecentActivity from '@/components/ui/pages/dashboard/RecentActivity'
-import QuickProfileCard from '@/components/ui/pages/dashboard/QuickProfileCard'
+import StatsGrid from '@/features/dashboard/StatsGrid'
+import RecentActivity from '@/features/dashboard/RecentActivity'
+import QuickProfileCard from '@/features/dashboard/QuickProfileCard'
 import { redirect } from 'next/navigation'
 
 // Helper for relative time

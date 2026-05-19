@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { getAdminData } from '@/actions/admin'
-import TransactionTable from '@/components/ui/pages/admin/TransactionTable'
+import TransactionTable from '@/features/admin/TransactionTable'
 
 export default async function AdminTransactionsPage() {
     await getAdminData();

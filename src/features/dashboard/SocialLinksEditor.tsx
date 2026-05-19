@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Input } from '@/components/common/Input'
+import { Input } from '@/components/ui/Input'
 
 type SocialLink = {
     platform: string

@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { snap } from '@/lib/midtrans' // Uses your uploaded midtrans.ts
-import { PLAN_CONFIG, DURATION_CONFIG, getPlanName } from '@/lib/plans' // Uses your uploaded plans.ts
+import { PLAN_CONFIG, DURATION_CONFIG, getPlanName } from '@/config/plans' // Uses your uploaded plans.ts
 import { PlanDuration } from '@prisma/client'
 
 export class SubscriptionService {

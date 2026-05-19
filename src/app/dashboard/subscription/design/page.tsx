@@ -2,7 +2,7 @@ import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { ProfileDataService } from '@/services/ProfileDataService'
 // Ensure you are importing the correct form component you are using
-import DesignSelectionForm from '@/components/ui/pages/subscription/DesignSelectionForm' 
+import DesignSelectionForm from '@/features/subscription/DesignSelectionForm' 
 
 // Helper to format address object into string
 function formatAddress(address: any) {

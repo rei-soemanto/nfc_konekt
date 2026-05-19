@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import CheckoutForm from '@/components/ui/pages/subscription/CheckoutForm'
+import CheckoutForm from '@/features/subscription/CheckoutForm'
 import Link from 'next/link'
 
 // ✅ FIX: Normalize inputs toUpperCase to prevent mismatch

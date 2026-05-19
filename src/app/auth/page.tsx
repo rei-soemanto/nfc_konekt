@@ -1,4 +1,4 @@
-import AuthCard from '@/components/ui/pages/auth/AuthCard'
+import AuthCard from '@/features/auth/AuthCard'
 
 export default function AuthPage() {
     return <AuthCard />

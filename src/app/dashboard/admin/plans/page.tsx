@@ -3,8 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { initializePlans, seedPlans } from '@/actions/admin-plans'
 import { getAdminData } from '@/actions/admin'
 import { redirect } from 'next/navigation'
-import PricingCard from '@/components/ui/pages/admin/PricingCard'
-import ExpansionPricingCard from '@/components/ui/pages/admin/ExpansionPricingCard'
+import PricingCard from '@/features/admin/PricingCard'
+import ExpansionPricingCard from '@/features/admin/ExpansionPricingCard'
 
 export default async function AdminPlansPage() {
     try { await getAdminData(); } catch { redirect('/dashboard'); }

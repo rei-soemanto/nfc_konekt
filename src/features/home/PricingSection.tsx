@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { PLAN_CONFIG } from '@/lib/plans' 
+import { PLAN_CONFIG } from '@/config/plans' 
 import { PlanCategory } from '@prisma/client'
 
 // Helper to format currency (IDR)

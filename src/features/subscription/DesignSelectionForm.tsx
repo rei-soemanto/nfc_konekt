@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveDesignChoice } from '@/actions/design'
-import { CARD_TEMPLATES } from '@/lib/designs'
-import DynamicCardPreview, { CardData } from '@/components/ui/pages/card-designer/DynamicCardPreview'
+import { CARD_TEMPLATES } from '@/config/designs'
+import DynamicCardPreview, { CardData } from '@/features/card-designer/DynamicCardPreview'
 
 type Props = {
     planId: string

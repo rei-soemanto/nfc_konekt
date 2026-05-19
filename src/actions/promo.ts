@@ -2,7 +2,7 @@
 
 import { PromoService } from '@/services/PromoService'
 import { prisma } from '@/lib/prisma'
-import { DURATION_CONFIG } from '@/lib/plans'
+import { DURATION_CONFIG } from '@/config/plans'
 import { PlanDuration } from '@prisma/client'
 
 export async function verifyPromoCode(code: string, planId: string, expansionPacks: number, mode: 'NEW' | 'EXPANSION') {

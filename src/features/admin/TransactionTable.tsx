@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { updateShipmentStatus, updateTrackingLink, markTransactionAsRead } from '@/actions/admin-transactions'
-import { getDesignById } from '@/lib/designs'
+import { getDesignById } from '@/config/designs'
 
 type Member = { fullName: string, email: string }
 type Transaction = {

@@ -1,9 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import SubscriptionInfo from '@/components/ui/pages/subscription/SubscriptionInfo'
-import ShipmentTracker from '@/components/ui/pages/subscription/ShipmentTracker'
-import { DURATION_CONFIG } from '@/lib/plans'
+import SubscriptionInfo from '@/features/subscription/SubscriptionInfo'
+import ShipmentTracker from '@/features/subscription/ShipmentTracker'
+import { DURATION_CONFIG } from '@/config/plans'
 import { PlanDuration } from '@prisma/client'
 
 export default async function SubscriptionStatusPage() {

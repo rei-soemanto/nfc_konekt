@@ -1,5 +1,5 @@
 import { getAllUsers } from '@/actions/admin-users'
-import UserManagement from '@/components/ui/pages/admin/UserManagement'
+import UserManagement from '@/features/admin/UserManagement'
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'

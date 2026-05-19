@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import html2canvas from 'html2canvas'
-import { CARD_LAYOUTS, DEFAULT_LAYOUT, CardLayout } from '@/lib/card-layouts'
+import { CARD_LAYOUTS, DEFAULT_LAYOUT, CardLayout } from '@/config/card-layouts'
 
 export type CardData = {
     fullName: string

@@ -1,5 +1,5 @@
 import { PromoService } from '@/services/PromoService'
-import PromoClientWrapper from '@/components/ui/pages/admin/promos/PromoClientWrapper'
+import PromoClientWrapper from '@/features/admin/promos/PromoClientWrapper'
 
 // Force dynamic so it refetches on new request
 export const dynamic = 'force-dynamic'; 

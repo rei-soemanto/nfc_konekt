@@ -1,8 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import TeamSetupForm from '@/components/ui/pages/subscription/TeamSetupForm'
-import { PLAN_CONFIG, EXPANSION_PACK_SIZE } from '@/lib/plans'
+import TeamSetupForm from '@/features/subscription/TeamSetupForm'
+import { PLAN_CONFIG, EXPANSION_PACK_SIZE } from '@/config/plans'
 
 export default async function TeamSetupPage({ searchParams }: { searchParams: Promise<{ planId: string, packs?: string, mode?: string }> }) {
     const userId = await getAuthUserId();

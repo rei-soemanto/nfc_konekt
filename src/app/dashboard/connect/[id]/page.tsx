@@ -1,7 +1,7 @@
 import { getAuthUserId } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import CorporateProfileCard from '@/components/ui/pages/shared/CorporateProfileCard'
+import CorporateProfileCard from '@/features/shared/CorporateProfileCard'
 import { ProfileDataService } from '@/services/ProfileDataService'
 
 export default async function ConnectionDetailPage({ params }: { params: Promise<{ id: string }> }) {

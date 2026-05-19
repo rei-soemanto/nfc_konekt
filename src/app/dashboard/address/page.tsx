@@ -1,5 +1,5 @@
 import { getUserAddress } from '@/actions/address'
-import AddressForm from '@/components/ui/pages/forms/AddressForm'
+import AddressForm from '@/features/forms/AddressForm'
 
 export default async function AddressPage() {
     const address = await getUserAddress();

@@ -2,8 +2,8 @@
 
 import { useActionState, useState } from 'react'
 import { login, signup } from '@/actions/auth'
-import { Input } from '@/components/common/Input'
-import { SubmitButton } from '@/components/common/Button'
+import { Input } from '@/components/ui/Input'
+import { SubmitButton } from '@/components/ui/Button'
 
 // --- 1. Sub-Component: Sign Up Form ---
 function SignUpForm({ isActive }: { isActive: boolean }) {

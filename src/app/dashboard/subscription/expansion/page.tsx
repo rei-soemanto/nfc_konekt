@@ -1,8 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import ExpansionUpgradeForm from '@/components/ui/pages/subscription/ExpansionUpgradeForm'
-import { DURATION_CONFIG } from '@/lib/plans'
+import ExpansionUpgradeForm from '@/features/subscription/ExpansionUpgradeForm'
+import { DURATION_CONFIG } from '@/config/plans'
 import { PlanDuration } from '@prisma/client'
 
 export default async function ExpansionPage() {

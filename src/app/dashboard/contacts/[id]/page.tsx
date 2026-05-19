@@ -1,6 +1,6 @@
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import ContactDetailView from '@/components/ui/pages/contacts/ContactDetailView'
+import ContactDetailView from '@/features/contacts/ContactDetailView'
 import { ContactService } from '@/services/ContactService' // <--- Import from the new file
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {

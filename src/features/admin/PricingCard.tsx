@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { updatePlanPrice } from '@/actions/admin-plans'
-import { DURATION_CONFIG } from '@/lib/plans'
+import { DURATION_CONFIG } from '@/config/plans'
 
 // Using 'any' for plan to avoid strict Prisma Enum import issues on client
 type Props = {

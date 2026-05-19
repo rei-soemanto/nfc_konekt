@@ -1,11 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import ProfileForm from '@/components/ui/pages/dashboard/ProfileForm'
-import SecuritySettings from '@/components/ui/pages/dashboard/SecuritySettings'
-import AddressForm from '@/components/ui/pages/forms/AddressForm' 
+import ProfileForm from '@/features/dashboard/ProfileForm'
+import SecuritySettings from '@/features/dashboard/SecuritySettings'
+import AddressForm from '@/features/forms/AddressForm' 
 import { getUserAddress } from '@/actions/address' 
-import CompanyProfileForm from '@/components/ui/pages/account/CompanyProfileForm'
+import CompanyProfileForm from '@/features/account/CompanyProfileForm'
 import dynamic from 'next/dynamic'
 
 export default async function AccountPage() {

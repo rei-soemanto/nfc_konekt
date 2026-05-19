@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import ContactTable from '@/components/ui/pages/contacts/ContactTable'
+import ContactTable from '@/features/contacts/ContactTable'
 import Link from 'next/link'
 
 export default async function ContactsPage() {

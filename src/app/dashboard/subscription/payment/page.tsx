@@ -1,8 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import SubscriptionTabs from '@/components/ui/pages/subscription/SubscriptionTabs' 
-import CheckoutForm from '@/components/ui/pages/subscription/CheckoutForm'
+import SubscriptionTabs from '@/features/subscription/SubscriptionTabs' 
+import CheckoutForm from '@/features/subscription/CheckoutForm'
 import Link from 'next/link'
 
 // --- HELPER FUNCTIONS FOR RANKING ---

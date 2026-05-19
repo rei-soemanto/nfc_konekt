@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getAdminData } from '@/actions/admin' 
 import { revalidatePath } from 'next/cache'
 import { PlanCategory, PlanDuration } from '@prisma/client'
-import { getPlanName } from '@/lib/plans'
+import { getPlanName } from '@/config/plans'
 
 // INTERNAL HELPER: Creates plans if missing (No Revalidate)
 // Safe to call inside a Page Component

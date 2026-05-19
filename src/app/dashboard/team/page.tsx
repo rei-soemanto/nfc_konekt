@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { PLAN_CONFIG, EXPANSION_PACK_SIZE } from '@/lib/plans'
-import TeamStats from '@/components/ui/pages/team/TeamStats'
-import TeamList from '@/components/ui/pages/team/TeamList'
-import AddMemberForm from '@/components/ui/pages/team/AddMemberForm'
+import { PLAN_CONFIG, EXPANSION_PACK_SIZE } from '@/config/plans'
+import TeamStats from '@/features/team/TeamStats'
+import TeamList from '@/features/team/TeamList'
+import AddMemberForm from '@/features/team/AddMemberForm'
 
 export default async function TeamPage() {
     const userId = await getAuthUserId();

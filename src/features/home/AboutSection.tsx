@@ -1,4 +1,4 @@
-import { ImageCarousel } from '@/components/common/ImageCarousel'
+import { ImageCarousel } from '@/components/ui/ImageCarousel'
 
 export function AboutSection() {
     return (

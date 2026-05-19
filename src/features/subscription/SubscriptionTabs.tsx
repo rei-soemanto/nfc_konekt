@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { PLAN_CONFIG, EXPANSION_PACK_SIZE, DURATION_CONFIG } from '@/lib/plans'
+import { PLAN_CONFIG, EXPANSION_PACK_SIZE, DURATION_CONFIG } from '@/config/plans'
 import { PlanDuration } from '@prisma/client'
 import { useRouter } from 'next/navigation'
 

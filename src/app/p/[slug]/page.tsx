@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { notFound } from 'next/navigation'
-import PublicProfile from '@/components/ui/pages/public/PublicProfile' // Import the Client Component
+import PublicProfile from '@/features/public/PublicProfile' // Import the Client Component
 
 export default async function PublicProfilePage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;

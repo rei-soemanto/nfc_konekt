@@ -5,7 +5,7 @@ import { getAuthUserId } from '@/lib/auth'
 import { snap } from '@/lib/midtrans'
 import { randomBytes, randomUUID } from 'crypto'
 import { PlanDuration } from '@prisma/client'
-import { DURATION_CONFIG } from '@/lib/plans'
+import { DURATION_CONFIG } from '@/config/plans'
 import { PromoService } from '@/services/PromoService'
 import bcrypt from 'bcryptjs'
 

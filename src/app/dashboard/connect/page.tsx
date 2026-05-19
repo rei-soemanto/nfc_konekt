@@ -1,5 +1,5 @@
 import { getMyConnections } from '@/actions/connection'
-import ConnectionList from '@/components/ui/pages/connect/ConnectionList'
+import ConnectionList from '@/features/connect/ConnectionList'
 
 export default async function ConnectPage() {
     const result = await getMyConnections();

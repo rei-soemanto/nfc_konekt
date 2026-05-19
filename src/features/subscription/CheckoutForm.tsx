@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import AddressForm from '@/components/ui/pages/forms/AddressForm'
+import AddressForm from '@/features/forms/AddressForm'
 import { createTransaction, createExpansionTransaction, renewSubscription } from '@/actions/payment'
 import Script from 'next/script'
 import PromoCodeInput from './PromoCodeInput' 
