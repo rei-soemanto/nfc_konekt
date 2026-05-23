@@ -1,9 +1,5 @@
 # NFC Konekt — Digital Business Card Platform
 
-<p align="center">
-  <img src="src/app/NFC Konekt Logo.jfif" alt="NFC Konekt Logo" width="120" />
-</p>
-
 **NFC Konekt** is a full-stack digital business card platform that replaces traditional paper cards with NFC-powered smart cards. Users create rich online profiles, link them to physical NFC cards, and share contact information instantly with a single tap — no app required for the recipient.
 
 ---
