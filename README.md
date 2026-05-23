@@ -39,15 +39,4 @@
 - **Contacts**: Personal address book — add contacts manually or auto-fill from NFC card scans.
 - Search and filter connections by name, email, company, or job title.
 
-### 🎨 Theming
-- 4 built-in themes: Light, Dark, Custom (Teal), and Pastel (Purple).
-- Theme-aware design across all pages using `next-themes`.
-
-### 🛡️ Admin Dashboard
-- User management: view, lock/unlock accounts.
-- Plan & pricing management.
-- Transaction tracking with shipment status updates and tracking links.
-- Promo code CRUD (create, toggle, edit, delete).
-- Global NFC writer tool for programming any card in the system.
-
 ---
