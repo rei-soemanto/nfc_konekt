@@ -32,7 +32,7 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: "Invalid Update Type" }, { status: 400 });
         }
 
-        console.log("PAYLOAD RECEIVED FROM FRONTEND:", data);
+        // SECURITY FIX (VULN-009): Removed debug console.log("PAYLOAD RECEIVED FROM FRONTEND:", data)
         return NextResponse.json({ success: true, data: result });
     } catch (error: any) {
         console.error("Profile Update Error:", error);

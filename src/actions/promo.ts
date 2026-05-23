@@ -4,8 +4,13 @@ import { PromoService } from '@/services/PromoService'
 import { prisma } from '@/lib/prisma'
 import { DURATION_CONFIG } from '@/config/plans'
 import { PlanDuration } from '@prisma/client'
+import { getAuthUserId } from '@/lib/auth'
 
 export async function verifyPromoCode(code: string, planId: string, expansionPacks: number, mode: 'NEW' | 'EXPANSION') {
+    // SECURITY FIX (VULN-008): Require authentication to prevent promo code enumeration
+    const userId = await getAuthUserId();
+    if (!userId) return { success: false, message: "Unauthorized" };
+
     try {
         // 1. Fetch Plan Data Server-Side (Secure)
         const plan = await prisma.plan.findUnique({ where: { id: planId } });

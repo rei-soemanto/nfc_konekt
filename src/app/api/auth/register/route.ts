@@ -23,12 +23,16 @@ export async function POST(request: Request) {
         // 2. Generate Token for Mobile
         const token = signToken(user.id);
 
-        // 3. Return Success
+        // 3. Return Success (only essential fields, avoid leaking internal data)
         return NextResponse.json({
             success: true,
             message: "Account created successfully",
             token: token,
-            user: user
+            user: {
+                id: user.id,
+                email: user.email,
+                fullName: user.fullName
+            }
         }, { status: 201 });
 
     } catch (error: any) {

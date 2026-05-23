@@ -3,7 +3,11 @@ import 'server-only'
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 
-const secretKey = process.env.SESSION_SECRET || 'your-secret-key'
+// SECURITY FIX (VULN-005): Removed hardcoded fallback 'your-secret-key'
+const secretKey = process.env.SESSION_SECRET;
+if (!secretKey) {
+    throw new Error('SESSION_SECRET is not defined in environment variables');
+}
 const encodedKey = new TextEncoder().encode(secretKey)
 
 type SessionPayload = {

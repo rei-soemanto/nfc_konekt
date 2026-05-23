@@ -1,10 +1,15 @@
 import { PromoService } from '@/services/PromoService'
 import PromoClientWrapper from '@/features/admin/promos/PromoClientWrapper'
+import { getAdminData } from '@/actions/admin'
+import { redirect } from 'next/navigation'
 
 // Force dynamic so it refetches on new request
 export const dynamic = 'force-dynamic'; 
 
 export default async function AdminPromosPage() {
+    // SECURITY FIX (VULN-006): Admin role check
+    try { await getAdminData(); } catch { redirect('/dashboard'); }
+
     // 1. Fetch from DB
     const promos = await PromoService.getAll();
 

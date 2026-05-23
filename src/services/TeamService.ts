@@ -74,7 +74,9 @@ export class TeamService {
         }
 
         // 3. Create Member
-        const defaultPassword = data.password || "Member123!"; // Default password strategy
+        // SECURITY FIX (VULN-004): Generate random password instead of hardcoded default
+        const { randomBytes } = await import('crypto');
+        const defaultPassword = data.password || randomBytes(8).toString('base64url').slice(0, 12);
         const hashedPassword = await bcrypt.hash(defaultPassword, 10);
         
         // Generate a clean slug

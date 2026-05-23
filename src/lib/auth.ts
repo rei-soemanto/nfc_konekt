@@ -22,8 +22,8 @@ export async function getAuthUserId(req?: Request): Promise<string | null> {
         
         return payload.userId as string;
     } catch (error) {
-        // Log error to see if it's an auth crash
-        console.error("Auth Token Error:", error); 
+        // SECURITY FIX (VULN-009): Don't log full JWT error details in production
+        console.error("Auth Token Error: Invalid or expired token"); 
         return null;
     }
 }

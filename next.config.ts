@@ -7,12 +7,24 @@ const nextConfig = {
             bodySizeLimit: '5mb',
         },
     },
-    // 2. Allow specific image domains (optional, prevents other errors)
+    // SECURITY FIX (VULN-010): Restrict image domains to known trusted sources
     images: {
         remotePatterns: [
             {
                 protocol: 'https',
-                hostname: '**',
+                hostname: 'lh3.googleusercontent.com', // Google profile avatars
+            },
+            {
+                protocol: 'https',
+                hostname: 'avatars.githubusercontent.com', // GitHub avatars
+            },
+            {
+                protocol: 'https',
+                hostname: 'res.cloudinary.com', // Cloudinary CDN
+            },
+            {
+                protocol: 'https',
+                hostname: 'nfc.thewkm.com', // Own domain
             },
         ],
     },

@@ -7,6 +7,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const userId = await getAuthUserId(req);
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    // SECURITY FIX (VULN-001): Admin role check
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user?.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
     try {
         const { id } = await params;
         const body = await req.json();
@@ -44,6 +48,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const userId = await getAuthUserId(req);
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    // SECURITY FIX (VULN-001): Admin role check
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user?.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     try {
         const { id } = await params;

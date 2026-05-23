@@ -45,11 +45,13 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
     // 1. SELF WRITE (Unchanged)
     if (data.writeMethod === 'SELF') {
         // ... (Keep existing logic)
+        // SECURITY FIX (VULN-004): Generate random password instead of hardcoded default
+        const randomPassword = randomBytes(8).toString('base64url').slice(0, 12);
         const newUser = await prisma.user.create({
             data: {
                 fullName: data.fullName,
                 email: data.email,
-                password: await bcrypt.hash("Member123!", 10),
+                password: await bcrypt.hash(randomPassword, 10),
                 role: 'USER',
                 accountStatus: 'ACTIVE',
                 parentId: userId,
@@ -71,11 +73,13 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
     // 2. ADMIN WRITE: Create Transaction Record!
     if (data.writeMethod === 'ADMIN') {
         // A. Create User
+        // SECURITY FIX (VULN-004): Generate random password instead of hardcoded default
+        const randomPassword = randomBytes(8).toString('base64url').slice(0, 12);
         const newUser = await prisma.user.create({
             data: {
                 fullName: data.fullName,
                 email: data.email,
-                password: await bcrypt.hash("Member123!", 10),
+                password: await bcrypt.hash(randomPassword, 10),
                 role: 'USER',
                 accountStatus: 'ACTIVE',
                 parentId: userId,

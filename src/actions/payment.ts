@@ -46,11 +46,13 @@ async function createPendingUsers(userId: string, pendingTeamData: string | null
             // Check by email to prevent duplicates
             const existing = await prisma.user.findUnique({ where: { email: member.email }});
             if (!existing) {
+                // SECURITY FIX (VULN-004): Generate random password instead of hardcoded default
+                const randomPassword = randomBytes(8).toString('base64url').slice(0, 12);
                 const newUser = await prisma.user.create({
                     data: {
                         fullName: member.fullName,
                         email: member.email,
-                        password: await hashPassword("Member123!"), // Default password
+                        password: await hashPassword(randomPassword), // Random password
                         role: 'USER',
                         accountStatus: 'ACTIVE',
                         parentId: userId, // Link to Team Leader

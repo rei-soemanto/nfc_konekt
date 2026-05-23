@@ -76,11 +76,13 @@ export async function POST(request: Request) {
                 for (const member of teamMembers) {
                     const existing = await prisma.user.findUnique({ where: { email: member.email }});
                     if (!existing) {
+                        // SECURITY FIX (VULN-004): Generate random password instead of hardcoded default
+                        const randomPassword = randomBytes(8).toString('base64url').slice(0, 12);
                         const newUser = await prisma.user.create({
                             data: {
                                 fullName: member.fullName,
                                 email: member.email,
-                                password: await hashPassword("Member123!"),
+                                password: await hashPassword(randomPassword),
                                 role: 'USER',
                                 accountStatus: 'ACTIVE',
                                 parentId: tx.userId, 
