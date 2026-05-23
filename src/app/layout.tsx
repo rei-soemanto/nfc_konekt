@@ -15,8 +15,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tailwind v4.0 Theme Colors Example",
-  description: "Tailwind v4.0 Theme Colors Example made by Kevstrosky",
+  title: "NFC Konekt — Digital Business Card Platform",
+  description: "Create, share, and manage digital business cards powered by NFC technology. Personal & Corporate plans with team management, analytics, and payment integration.",
+  icons: {
+    icon: "/NFC Konekt Logo.jfif",
+    apple: "/NFC Konekt Logo.jfif",
+  },
 };
 
 export default function RootLayout({
