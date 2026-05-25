@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { AuthService } from '@/services/AuthService' // Import the new Service
 
 export type AuthState = {
+    success?: boolean
     message?: string
     errors?: {
         fullName?: string[]
@@ -75,29 +76,19 @@ export async function signup(prevState: AuthState, formData: FormData): Promise<
     }
 
     try {
-        // REFACTOR: Use Service to handle check, hash, and create
-        const newUser = await AuthService.registerUser({
+        // REFACTOR: Use Service to handle check, hash, create, and send verification email
+        await AuthService.registerUser({
             fullName,
             email,
             password,
             companyName
         })
 
-        // Auto Login (Create Session Token)
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET_KEY)
-        const token = await new SignJWT({ userId: newUser.id, role: newUser.role })
-            .setProtectedHeader({ alg: 'HS256' })
-            .setExpirationTime('7d')
-            .sign(secret)
-
-        const cookieStore = await cookies()
-        cookieStore.set('session_token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 60 * 60 * 24 * 7
-        })
+        // No auto-login — return success message instead
+        return { 
+            success: true,
+            message: "Account verification email sent, check your email to activate your account" 
+        }
 
     } catch (error: any) {
         console.error("Signup Error:", error)
@@ -112,8 +103,6 @@ export async function signup(prevState: AuthState, formData: FormData): Promise<
 
         return { message: "Failed to create account." }
     }
-
-    redirect('/dashboard')
 }
 
 // --- 3. LOGOUT ACTION ---

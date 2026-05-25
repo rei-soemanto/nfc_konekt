@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { AuthService } from '@/services/AuthService'
-import { signToken } from '@/lib/jwt'
 
 export async function POST(request: Request) {
     try {
@@ -12,27 +11,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        // 1. Call Service to Create User
-        const user = await AuthService.registerUser({ 
+        // 1. Call Service to Create User (sends verification email internally)
+        await AuthService.registerUser({ 
             fullName, 
             email, 
             password, 
             companyName 
         });
 
-        // 2. Generate Token for Mobile
-        const token = signToken(user.id);
-
-        // 3. Return Success (only essential fields, avoid leaking internal data)
+        // 2. Return Success — no token, user must verify email first
         return NextResponse.json({
             success: true,
-            message: "Account created successfully",
-            token: token,
-            user: {
-                id: user.id,
-                email: user.email,
-                fullName: user.fullName
-            }
+            message: "Account verification email sent, check your email to activate your account",
         }, { status: 201 });
 
     } catch (error: any) {

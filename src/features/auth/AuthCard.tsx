@@ -26,7 +26,18 @@ function SignUpForm({ isActive }: { isActive: boolean }) {
                 <h1 className="text-2xl md:text-3xl font-bold mb-4 text-gray-800 dark:text-white">Create Account</h1>
                 
                 <div className="w-full space-y-3 text-left overflow-y-auto max-h-[80%] md:max-h-none py-2 px-1 custom-scrollbar">
-                    {state?.message && (
+                    {/* Success Message (Verification Email Sent) */}
+                    {state?.success && state?.message && (
+                        <div className="flex items-start gap-3 text-green-700 dark:text-green-300 text-sm text-center bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                            <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            <p>{state.message}</p>
+                        </div>
+                    )}
+
+                    {/* Error Message */}
+                    {!state?.success && state?.message && (
                         <p className="text-red-500 text-sm text-center bg-red-50 dark:bg-red-900/20 p-2 rounded">{state.message}</p>
                     )}
                     

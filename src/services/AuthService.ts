@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
+import { sendVerificationEmail } from '@/lib/email'
 
 export class AuthService {
     // 1. Login Logic
@@ -9,6 +11,9 @@ export class AuthService {
         });
 
         if (!user) return null;
+
+        // Check email verification — unverified users cannot log in
+        if (!user.emailVerified) return null;
 
         const isValid = await bcrypt.compare(passwordInput, user.password);
         if (!isValid) return null;
@@ -35,7 +40,7 @@ export class AuthService {
         // 3. Generate Card Slug (Same logic as your auth.ts)
         const slug = data.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
-        // 4. Create User & Default Card
+        // 4. Create User & Default Card (emailVerified defaults to false)
         const newUser = await prisma.user.create({
             data: {
                 fullName: data.fullName,
@@ -52,9 +57,53 @@ export class AuthService {
             }
         });
 
-        // 5. Return user without password
+        // 5. Generate verification token
+        const token = crypto.randomBytes(32).toString('hex');
+
+        await prisma.verificationToken.create({
+            data: {
+                token,
+                userId: newUser.id,
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+            }
+        });
+
+        // 6. Send verification email
+        await sendVerificationEmail(data.email, token);
+
+        // 7. Return user without password
         const { password, ...userWithoutPassword } = newUser;
         return userWithoutPassword;
+    }
+
+    // 3. Verify Email Token
+    static async verifyEmail(token: string) {
+        const verificationToken = await prisma.verificationToken.findUnique({
+            where: { token },
+            include: { user: true }
+        });
+
+        if (!verificationToken) {
+            throw new Error("Invalid verification token");
+        }
+
+        // Check expiry
+        if (verificationToken.expiresAt < new Date()) {
+            // Clean up expired token
+            await prisma.verificationToken.delete({ where: { id: verificationToken.id } });
+            throw new Error("Verification token has expired");
+        }
+
+        // Mark email as verified
+        await prisma.user.update({
+            where: { id: verificationToken.userId },
+            data: { emailVerified: true }
+        });
+
+        // Delete the used token
+        await prisma.verificationToken.delete({ where: { id: verificationToken.id } });
+
+        return true;
     }
 
     static async changePassword(userId: string, oldPass: string, newPass: string) {
