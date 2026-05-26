@@ -29,6 +29,7 @@ export class ProfileService {
                 ...(data.bio != null && { bio: data.bio }),
                 ...(data.jobTitle != null && { jobTitle: data.jobTitle }),
                 ...(data.companyWebsite != null && { companyWebsite: data.companyWebsite }),
+                ...(data.avatarUrl != null && { avatarUrl: data.avatarUrl }),
                 
                 // Clear old and add new
                 ...(data.socialLinks && {
