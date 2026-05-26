@@ -22,34 +22,36 @@ export async function PATCH(req: Request) {
         const body = await req.json();
         const { type, ...data } = body;
 
-        if (data.photo && typeof data.photo === 'string' && data.photo.startsWith('data:image')) {
-            
-            // 1. Strip the header (e.g., "data:image/png;base64,") and get the raw data & extension
-            const matches = data.photo.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
-            
+        // Look for the base64 string under either avatarUrl or photo
+        const imageString = data.avatarUrl || data.photo;
+
+        if (imageString && typeof imageString === 'string' && imageString.startsWith('data:image')) {
+
+            // 1. Strip header and get details
+            const matches = imageString.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+
             if (matches && matches.length === 3) {
-                const extension = matches[1] === 'jpeg' ? 'jpg' : matches[1]; 
+                const extension = matches[1] === 'jpeg' ? 'jpg' : matches[1];
                 const base64Data = matches[2];
                 const buffer = Buffer.from(base64Data, 'base64');
-                
-                // 2. Generate a unique filename
-                const fileName = `profile-${userId}-${Date.now()}.${extension}`;
-                
-                // 3. Build the absolute path to your server's public/uploads folder
+
+                // 2. Generate a filename matching your old structure
+                const fileName = `avatar-${userId}-${Date.now()}.${extension}`;
+
+                // 3. Absolute path to host directory
                 const uploadDir = path.join(process.cwd(), 'public', 'uploads');
                 const filePath = path.join(uploadDir, fileName);
-                
-                // 4. Save the physical file to the disk
+
+                // 4. Write to disk
                 await fs.writeFile(filePath, buffer);
-                
-                // 5. CRITICAL: Overwrite the massive text string in the data object 
-                // with the public URL so your database only saves "/uploads/profile-1-123.jpg"
-                data.photo = `/uploads/${fileName}`;
+
+                // 5. Map to your true DB column name and clean up temp keys
+                data.avatarUrl = `/uploads/${fileName}`;
+                if (data.photo) delete data.photo;
             }
         }
 
         let result;
-        // Mobile app sends "type" to tell us what to update
         if (type === 'PERSONAL') {
             result = await ProfileService.updatePersonal(userId, data);
         } else if (type === 'CORPORATE') {
@@ -60,7 +62,6 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: "Invalid Update Type" }, { status: 400 });
         }
 
-        // SECURITY FIX (VULN-009): Removed debug console.log("PAYLOAD RECEIVED FROM FRONTEND:", data)
         return NextResponse.json({ success: true, data: result });
     } catch (error: any) {
         console.error("Profile Update Error:", error);
