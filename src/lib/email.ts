@@ -78,7 +78,7 @@ export async function sendVerificationEmail(email: string, token: string) {
     `
 
     await transporter.sendMail({
-        from: process.env.SMTP_FROM || '"NFC Konekt" <noreply@nfckonekt.com>',
+        from: process.env.SMTP_FROM,
         to: email,
         subject: 'Verify your NFC Konekt account',
         html,
