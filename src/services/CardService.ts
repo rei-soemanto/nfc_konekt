@@ -87,7 +87,7 @@ export class CardService {
         }
 
         // 3. Generate Payload
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nfc.thewkm.com';
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nfckonekt.com';
         
         return {
             slug: card.slug,

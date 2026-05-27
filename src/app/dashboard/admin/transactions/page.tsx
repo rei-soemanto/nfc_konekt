@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma'
 import { getAdminData } from '@/actions/admin'
 import TransactionTable from '@/features/admin/TransactionTable'
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminTransactionsPage() {
     await getAdminData();
 

@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
  * Send a verification email with a branded HTML template.
  */
 export async function sendVerificationEmail(email: string, token: string) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nfckonekt.com'
     const verifyUrl = `${appUrl}/api/auth/verify-email?token=${token}`
 
     const html = `
