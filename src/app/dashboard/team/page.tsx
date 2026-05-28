@@ -30,7 +30,15 @@ export default async function TeamPage() {
     const manager = user.parent || user;
     const plan = manager.subscription?.plan;
     
-    if (!plan) return redirect('/dashboard/subscription');
+    const planCategory = plan?.category;
+    if (!plan || planCategory !== 'CORPORATE') {
+        return (
+            <div className="p-8 text-center">
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Access Denied</h1>
+                <p className="text-gray-500">This feature is available for Corporate plans only.</p>
+            </div>
+        )
+    }
 
     // 2. Combine Manager + Members for Display
     // We create a "fake" member object for the manager to display them in the list

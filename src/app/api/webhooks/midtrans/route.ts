@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createHash, randomBytes } from 'crypto'
 import bcrypt from 'bcryptjs'
+import { sendTeamMemberCredentials } from '@/lib/email'
 
 // Helper: Generate a unique friendly slug
 function generateSlug(name: string) {
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
                                 password: await hashPassword(randomPassword),
                                 role: 'USER',
                                 accountStatus: 'ACTIVE',
-                                parentId: tx.userId, 
+                                parentId: tx.userId,
                             }
                         });
                         await prisma.card.create({
@@ -95,6 +96,19 @@ export async function POST(request: Request) {
                                 userId: newUser.id
                             }
                         });
+                        try {
+                            const subscriptionEndDate = calculateEndDate(tx.plan!.duration);
+                            await sendTeamMemberCredentials({
+                                email: member.email,
+                                fullName: member.fullName,
+                                password: randomPassword,
+                                adminName: tx.user.fullName,
+                                companyName: tx.user.companyName ?? null,
+                                loginUrl: `${process.env.NEXT_PUBLIC_APP_URL}/auth/login`,
+                                subscriptionEndDate,
+                                planDuration: tx.plan!.duration,
+                            })
+                        } catch {}
                     }
                 }
             }

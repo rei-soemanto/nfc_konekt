@@ -5,6 +5,7 @@ import { getAuthUserId } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { randomBytes, randomUUID } from 'crypto'
 import bcrypt from 'bcryptjs'
+import { sendTeamMemberCredentials } from '@/lib/email'
 
 // Helper
 function generateSlug(name: string) {
@@ -66,6 +67,19 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
             }
         });
 
+        try {
+            await sendTeamMemberCredentials({
+                email: data.email,
+                fullName: data.fullName,
+                password: randomPassword,
+                adminName: parent.fullName,
+                companyName: parent.companyName ?? null,
+                loginUrl: `${process.env.NEXT_PUBLIC_APP_URL}/auth/login`,
+                subscriptionEndDate: parent.subscription.endDate ?? null,
+                planDuration: parent.subscription.plan?.duration ?? 'MONTHLY',
+            })
+        } catch {}
+
         revalidatePath('/dashboard/team');
         return { success: true, message: "Member added successfully." };
     }
@@ -94,6 +108,19 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
                 userId: newUser.id
             }
         });
+
+        try {
+            await sendTeamMemberCredentials({
+                email: data.email,
+                fullName: data.fullName,
+                password: randomPassword,
+                adminName: parent.fullName,
+                companyName: parent.companyName ?? null,
+                loginUrl: `${process.env.NEXT_PUBLIC_APP_URL}/auth/login`,
+                subscriptionEndDate: parent.subscription.endDate ?? null,
+                planDuration: parent.subscription.plan?.duration ?? 'MONTHLY',
+            })
+        } catch {}
 
         // C. CREATE TRANSACTION RECORD (Fixing the bug)
         // We create a "Paid" transaction of 0 amount just to track the shipment request
