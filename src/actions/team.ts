@@ -55,6 +55,7 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
                 password: await bcrypt.hash(randomPassword, 10),
                 role: 'USER',
                 accountStatus: 'ACTIVE',
+                emailVerified: true,
                 parentId: userId,
             }
         });
@@ -96,6 +97,7 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
                 password: await bcrypt.hash(randomPassword, 10),
                 role: 'USER',
                 accountStatus: 'ACTIVE',
+                emailVerified: true,
                 parentId: userId,
             }
         });

@@ -86,6 +86,7 @@ export async function POST(request: Request) {
                                 password: await hashPassword(randomPassword),
                                 role: 'USER',
                                 accountStatus: 'ACTIVE',
+                                emailVerified: true,
                                 parentId: tx.userId,
                             }
                         });
