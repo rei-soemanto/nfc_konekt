@@ -184,7 +184,7 @@ export async function createTransaction(planId: string, expansionPacks: number =
         });
 
         // Don't create users yet, wait for payment webhook
-        return { status: 'pending', token: transaction.token };
+        return { status: 'pending', token: transaction.token, orderId };
 
     } catch (error: any) {
         console.error("New Plan Error:", error);
@@ -281,7 +281,7 @@ export async function renewSubscription(planId: string, promoCode?: string) {
             data: { paymentId: orderId, snapToken: transaction.token, startDate, endDate }
         });
 
-        return { status: 'pending', token: transaction.token };
+        return { status: 'pending', token: transaction.token, orderId };
 
     } catch (error: any) {
         console.error("Renew Error:", error);
@@ -391,7 +391,7 @@ export async function createExpansionTransaction(planId: string, packsToAdd: num
         });
 
         // Don't create users yet, wait for payment webhook
-        return { status: 'pending', token: transaction.token };
+        return { status: 'pending', token: transaction.token, orderId };
 
     } catch (error: any) {
         console.error("Expansion Error:", error);

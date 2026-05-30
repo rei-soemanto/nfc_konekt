@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import AddressForm from '@/features/forms/AddressForm'
 import { createTransaction, createExpansionTransaction, renewSubscription } from '@/actions/payment'
+import { verifyPayment } from '@/actions/verify-payment'
 import Script from 'next/script'
 import PromoCodeInput from './PromoCodeInput' 
 
@@ -87,7 +88,13 @@ export default function CheckoutForm({ userAddress, plan, expansionPacks, mode =
 
             if (result.token) {
                 window.snap.pay(result.token, {
-                    onSuccess: () => window.location.href = '/dashboard/subscription/status',
+                    onSuccess: async () => {
+                        // Verify payment server-side (safety net if webhook doesn't fire)
+                        if (result.orderId) {
+                            await verifyPayment(result.orderId);
+                        }
+                        window.location.href = '/dashboard/subscription/status';
+                    },
                     onPending: () => window.location.href = '/dashboard/subscription/status',
                     onError: () => {
                         setGlobalError("Payment failed or was declined.");

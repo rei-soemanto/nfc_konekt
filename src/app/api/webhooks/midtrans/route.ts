@@ -1,27 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { createHash, randomBytes } from 'crypto'
-import bcrypt from 'bcryptjs'
-import { sendTeamMemberCredentials } from '@/lib/email'
-
-// Helper: Generate a unique friendly slug
-function generateSlug(name: string) {
-    const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const suffix = randomBytes(3).toString('hex'); // Adds 6 random chars
-    return `${base}-${suffix}`;
-}
-
-async function hashPassword(plain: string) {
-    return await bcrypt.hash(plain, 10);
-}
-
-// Map duration enum to days
-function daysForDuration(duration: string): number {
-    if (duration === 'MONTHLY') return 30;
-    if (duration === 'SIX_MONTHS') return 180;
-    if (duration === 'YEARLY') return 365;
-    return 30;
-}
+import { createHash } from 'crypto'
+import { processSuccessfulPayment } from '@/actions/verify-payment'
 
 export async function POST(request: Request) {
     try {
@@ -35,10 +15,9 @@ export async function POST(request: Request) {
 
         if (signature !== signature_key) return NextResponse.json({ message: "Invalid Signature" }, { status: 403 });
 
-        // 2. Find TRANSACTION (Primary Record)
+        // 2. Find TRANSACTION
         const tx = await prisma.transaction.findUnique({
             where: { paymentId: order_id },
-            include: { user: true, plan: true }
         });
 
         if (!tx) return NextResponse.json({ message: "Transaction not found" }, { status: 404 });
@@ -47,134 +26,23 @@ export async function POST(request: Request) {
         let isPaid = false;
 
         if (transaction_status === 'settlement') {
-            // Settlement is always final — money is confirmed received
             isPaid = true;
         } else if (transaction_status === 'capture') {
-            // For card payments, check fraud status before confirming
             if (fraud_status === 'accept' || !fraud_status) {
                 isPaid = true;
             }
-            // fraud_status === 'challenge' means manual review needed — don't mark paid yet
         }
 
-        // 4. Handle Success
+        // 4. Process
         if (isPaid) {
-            
-            // A. Update Transaction Status
-            await prisma.transaction.update({
-                where: { id: tx.id },
-                data: {
-                    status: 'PAID',
-                    shipmentStatus: tx.shippingAddress ? 'PROCESSING' : 'ARRIVED' // Ready for shipping
-                }
-            });
-
-            // B. Update Subscription (The "User Display" State)
-            // Logic differs for NEW vs EXPANSION vs RENEW
-            if (tx.type === 'NEW_SUBSCRIPTION' || tx.type === 'NEW') {
-                await prisma.subscription.update({
-                    where: { userId: tx.userId },
-                    data: {
-                        status: 'ACTIVE',
-                        shipmentStatus: tx.shippingAddress ? 'PROCESSING' : undefined,
-                        startDate: new Date(),
-                        endDate: calculateEndDate(tx.plan!.duration) 
-                    }
-                });
-            } else if (tx.type === 'EXPANSION') {
-                // Increment packs
-                await prisma.subscription.update({
-                    where: { userId: tx.userId },
-                    data: {
-                        expansionPacks: { increment: tx.expansionPacks },
-                        shipmentStatus: 'PROCESSING', // New cards need shipping
-                        shippingAddress: tx.shippingAddress // Update to latest address used
-                    }
-                });
-            } else if (tx.type === 'RENEW') {
-                // Time-stacking: extend from current endDate if subscription is still active,
-                // otherwise start fresh from today
-                const sub = await prisma.subscription.findUnique({ where: { userId: tx.userId } });
-                const now = new Date();
-                const currentEnd = sub?.endDate && new Date(sub.endDate) > now 
-                    ? new Date(sub.endDate) 
-                    : now;
-                
-                const newEndDate = new Date(currentEnd);
-                newEndDate.setDate(newEndDate.getDate() + daysForDuration(tx.plan!.duration));
-
-                // If subscription was expired, reset startDate to now; otherwise keep existing
-                const isExpired = !sub?.endDate || new Date(sub.endDate) <= now;
-
-                await prisma.subscription.update({
-                    where: { userId: tx.userId },
-                    data: {
-                        status: 'ACTIVE',
-                        ...(isExpired ? { startDate: now } : {}),
-                        endDate: newEndDate,
-                    }
-                });
-            }
-
-            // C. Create Users & Cards (from Transaction Manifest)
-            if (tx.pendingTeamData) {
-                const teamMembers = JSON.parse(tx.pendingTeamData);
-                for (const member of teamMembers) {
-                    const existing = await prisma.user.findUnique({ where: { email: member.email }});
-                    if (!existing) {
-                        // SECURITY FIX (VULN-004): Generate random password instead of hardcoded default
-                        const randomPassword = randomBytes(8).toString('base64url').slice(0, 12);
-                        const newUser = await prisma.user.create({
-                            data: {
-                                fullName: member.fullName,
-                                email: member.email,
-                                password: await hashPassword(randomPassword),
-                                role: 'USER',
-                                accountStatus: 'ACTIVE',
-                                emailVerified: true,
-                                parentId: tx.userId,
-                            }
-                        });
-                        await prisma.card.create({
-                            data: {
-                                slug: generateSlug(newUser.fullName),
-                                status: 'ACTIVE',
-                                userId: newUser.id
-                            }
-                        });
-                        try {
-                            const subscriptionEndDate = calculateEndDate(tx.plan!.duration);
-                            await sendTeamMemberCredentials({
-                                email: member.email,
-                                fullName: member.fullName,
-                                password: randomPassword,
-                                adminName: tx.user.fullName,
-                                companyName: tx.user.companyName ?? null,
-                                loginUrl: `${process.env.NEXT_PUBLIC_APP_URL}/auth/login`,
-                                subscriptionEndDate,
-                                planDuration: tx.plan!.duration,
-                            })
-                        } catch {}
-                    }
-                }
-            }
-        }
-        else if (transaction_status === 'expire' || transaction_status === 'cancel') {
+            await processSuccessfulPayment(order_id);
+        } else if (transaction_status === 'expire' || transaction_status === 'cancel') {
             await prisma.transaction.update({ where: { id: tx.id }, data: { status: 'EXPIRED' } });
         }
-        // 'pending' status from Midtrans = no action needed, keep waiting
 
         return NextResponse.json({ status: 'OK' });
     } catch (error) {
         console.error("Midtrans Webhook Error:", error);
         return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
     }
-}
-
-function calculateEndDate(duration: string) {
-    const date = new Date();
-    if (duration === 'MONTHLY') date.setDate(date.getDate() + 30);
-    else if (duration === 'SIX_MONTHS') date.setDate(date.getDate() + 180);
-    else if (duration === 'YEARLY') date.setDate(date.getDate() + 365);
-    return date;
 }

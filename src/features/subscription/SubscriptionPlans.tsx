@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Script from 'next/script'
 import { createTransaction } from '@/actions/payment'
+import { verifyPayment } from '@/actions/verify-payment'
 
 declare global {
     interface Window {
@@ -27,7 +28,7 @@ export default function SubscriptionPlans({ plans, userId }: { plans: Plan[], us
 
         try {
             // FIX: Call correct function name
-            const { token, status } = await createTransaction(plan.id);
+            const { token, status, orderId } = await createTransaction(plan.id);
 
             if (status === 'free_activated') {
                 alert("Plan activated successfully!");
@@ -37,7 +38,10 @@ export default function SubscriptionPlans({ plans, userId }: { plans: Plan[], us
 
             if (token && window.snap) {
                 window.snap.pay(token, {
-                    onSuccess: function() {
+                    onSuccess: async function() {
+                        if (orderId) {
+                            await verifyPayment(orderId);
+                        }
                         alert("Payment Success!");
                         window.location.href = '/dashboard/subscription/status';
                     },
