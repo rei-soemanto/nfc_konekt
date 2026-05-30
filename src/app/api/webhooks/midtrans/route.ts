@@ -15,10 +15,18 @@ async function hashPassword(plain: string) {
     return await bcrypt.hash(plain, 10);
 }
 
+// Map duration enum to days
+function daysForDuration(duration: string): number {
+    if (duration === 'MONTHLY') return 30;
+    if (duration === 'SIX_MONTHS') return 180;
+    if (duration === 'YEARLY') return 365;
+    return 30;
+}
+
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { order_id, transaction_status, status_code, gross_amount, signature_key } = body;
+        const { order_id, transaction_status, status_code, gross_amount, signature_key, fraud_status } = body;
 
         // 1. Verify Signature
         const serverKey = process.env.MIDTRANS_SERVER_KEY || "";
@@ -35,8 +43,22 @@ export async function POST(request: Request) {
 
         if (!tx) return NextResponse.json({ message: "Transaction not found" }, { status: 404 });
 
-        // 3. Handle Success
-        if (transaction_status === 'capture' || transaction_status === 'settlement') {
+        // 3. Determine if payment is successful
+        let isPaid = false;
+
+        if (transaction_status === 'settlement') {
+            // Settlement is always final — money is confirmed received
+            isPaid = true;
+        } else if (transaction_status === 'capture') {
+            // For card payments, check fraud status before confirming
+            if (fraud_status === 'accept' || !fraud_status) {
+                isPaid = true;
+            }
+            // fraud_status === 'challenge' means manual review needed — don't mark paid yet
+        }
+
+        // 4. Handle Success
+        if (isPaid) {
             
             // A. Update Transaction Status
             await prisma.transaction.update({
@@ -48,7 +70,7 @@ export async function POST(request: Request) {
             });
 
             // B. Update Subscription (The "User Display" State)
-            // Logic differs for NEW vs EXPANSION
+            // Logic differs for NEW vs EXPANSION vs RENEW
             if (tx.type === 'NEW_SUBSCRIPTION' || tx.type === 'NEW') {
                 await prisma.subscription.update({
                     where: { userId: tx.userId },
@@ -67,6 +89,29 @@ export async function POST(request: Request) {
                         expansionPacks: { increment: tx.expansionPacks },
                         shipmentStatus: 'PROCESSING', // New cards need shipping
                         shippingAddress: tx.shippingAddress // Update to latest address used
+                    }
+                });
+            } else if (tx.type === 'RENEW') {
+                // Time-stacking: extend from current endDate if subscription is still active,
+                // otherwise start fresh from today
+                const sub = await prisma.subscription.findUnique({ where: { userId: tx.userId } });
+                const now = new Date();
+                const currentEnd = sub?.endDate && new Date(sub.endDate) > now 
+                    ? new Date(sub.endDate) 
+                    : now;
+                
+                const newEndDate = new Date(currentEnd);
+                newEndDate.setDate(newEndDate.getDate() + daysForDuration(tx.plan!.duration));
+
+                // If subscription was expired, reset startDate to now; otherwise keep existing
+                const isExpired = !sub?.endDate || new Date(sub.endDate) <= now;
+
+                await prisma.subscription.update({
+                    where: { userId: tx.userId },
+                    data: {
+                        status: 'ACTIVE',
+                        ...(isExpired ? { startDate: now } : {}),
+                        endDate: newEndDate,
                     }
                 });
             }
@@ -117,9 +162,11 @@ export async function POST(request: Request) {
         else if (transaction_status === 'expire' || transaction_status === 'cancel') {
             await prisma.transaction.update({ where: { id: tx.id }, data: { status: 'EXPIRED' } });
         }
+        // 'pending' status from Midtrans = no action needed, keep waiting
 
         return NextResponse.json({ status: 'OK' });
     } catch (error) {
+        console.error("Midtrans Webhook Error:", error);
         return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
     }
 }
