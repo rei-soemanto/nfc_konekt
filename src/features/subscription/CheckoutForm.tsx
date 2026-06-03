@@ -119,7 +119,7 @@ export default function CheckoutForm({ userAddress, plan, expansionPacks, mode =
 
     return (
         <div className={`grid grid-cols-1 ${mode === 'RENEW' ? 'max-w-xl mx-auto' : 'md:grid-cols-3 gap-8'}`}>
-            <Script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY} strategy="lazyOnload" />
+            <Script src="https://app.midtrans.com/snap/snap.js" data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY} strategy="lazyOnload" />
 
             {/* LEFT COLUMN (Hidden for RENEW) */}
             {mode !== 'RENEW' && (

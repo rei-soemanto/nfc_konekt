@@ -5,11 +5,11 @@ if (!process.env.MIDTRANS_SERVER_KEY) {
 }
 
 export const coreApi = new midtransClient.CoreApi({
-    isProduction: false, // sandbox
+    isProduction: true, // production
     serverKey: process.env.MIDTRANS_SERVER_KEY,
 });
 
 export const snap = new midtransClient.Snap({
-    isProduction: false,
+    isProduction: true,
     serverKey: process.env.MIDTRANS_SERVER_KEY,
 });
