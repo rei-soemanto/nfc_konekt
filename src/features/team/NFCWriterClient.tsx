@@ -53,7 +53,7 @@ export default function NFCWriterClient({ members }: { members: Member[] }) {
         try {
             // 3. FETCH SECURE PAYLOAD FROM API
             // This ensures the user actually has permission to write this card
-            const res = await fetch('/api/cards/write', {
+            const res = await fetch('/api/cards/writer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ slug: selectedSlug })

@@ -42,7 +42,7 @@ export default function NFCWriter({ cards }: { cards: CardOption[] }) {
 
             // 1. FETCH SECURE PAYLOAD FROM API
             // This ensures we write the exact same format as the User App
-            const res = await fetch('/api/cards/write', {
+            const res = await fetch('/api/cards/writer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ slug: selectedSlug })
