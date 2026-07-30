@@ -44,8 +44,8 @@ export default function AddressForm({ initialData, onSave, redirectAfter, button
                 router.refresh(); // Refresh server data
             }
         } catch (error) {
-            console.error(error);
-            alert("Failed to save address");
+            console.error('[AddressForm.handleSubmit]', error);
+            alert("Could not save your address. Your changes were not applied — please check the fields and try again.");
         } finally {
             setLoading(false);
         }

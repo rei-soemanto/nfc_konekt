@@ -28,7 +28,8 @@ export async function logScan(cardSlug: string) {
         revalidatePath('/dashboard');
         return { success: true };
     } catch (error) {
-        return { success: false, error: 'Failed to log' };
+        console.error('[logScan]', error);
+        return { success: false, error: 'Could not record this card scan. The profile still loaded normally.' };
     }
 }
 

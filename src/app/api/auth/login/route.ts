@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         });
 
     } catch (error) {
-        console.error("Login API Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        console.error("[POST /api/auth/login]", error);
+        return NextResponse.json({ error: "Could not sign you in right now. Please try again in a moment." }, { status: 500 });
     }
 }

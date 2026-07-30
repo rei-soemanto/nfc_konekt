@@ -18,6 +18,6 @@ export async function cancelSubscription() {
         return { success: true };
     } catch (error) {
         console.error(error);
-        return { success: false, message: "Failed to cancel subscription." };
+        return { success: false, message: "Could not cancel your subscription. It is still active — please try again or contact support." };
     }
 }

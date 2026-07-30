@@ -75,7 +75,8 @@ export default function UserManagement({ initialUsers }: { initialUsers: any[] }
             alert("User updated successfully");
             window.location.reload(); 
         } catch (e) {
-            alert("Failed to update");
+            console.error('[UserManagement.handleSave]', e);
+            alert("Could not save this user. No changes were applied — please try again.");
         } finally {
             setLoading(false);
         }

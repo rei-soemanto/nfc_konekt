@@ -40,7 +40,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         return NextResponse.json({ success: true, data: updatedPromo });
     } catch (error) {
         console.error("Update Error:", error);
-        return NextResponse.json({ error: "Failed to update promo" }, { status: 500 });
+        return NextResponse.json({ error: "Could not update that promo code. Your changes were not saved." }, { status: 500 });
     }
 }
 
@@ -59,6 +59,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("Delete Error:", error);
-        return NextResponse.json({ error: "Failed to delete promo" }, { status: 500 });
+        return NextResponse.json({ error: "Could not delete that promo code. It may already have been removed." }, { status: 500 });
     }
 }

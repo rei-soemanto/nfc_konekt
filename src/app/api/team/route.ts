@@ -50,7 +50,17 @@ export async function POST(req: Request) {
         });
 
     } catch (error: any) {
-        console.error("Add Member Error:", error);
-        return NextResponse.json({ error: error.message || "Failed to add member" }, { status: 400 });
+        console.error("[POST /api/team]", error);
+
+        // TeamService throws plain Errors with messages meant for the user
+        // ("Team limit reached", "Email already registered"). A Prisma error
+        // carries a `code` and its message exposes schema internals, so those
+        // are replaced rather than forwarded.
+        const isPrismaError = typeof error?.code === 'string' && error.code.startsWith('P');
+        const message = !isPrismaError && typeof error?.message === 'string' && error.message
+            ? error.message
+            : "Could not add that team member. Please try again.";
+
+        return NextResponse.json({ error: message }, { status: isPrismaError ? 500 : 400 });
     }
 }

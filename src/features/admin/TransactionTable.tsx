@@ -76,8 +76,8 @@ export default function TransactionTable({ transactions }: { transactions: any[]
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Failed to generate CSV", error);
-            alert("Error generating CSV file.");
+            console.error('[TransactionTable.handleExportCsv]', error);
+            alert("Could not generate the CSV manifest for this transaction. Nothing was downloaded — please try again.");
         }
     };
 

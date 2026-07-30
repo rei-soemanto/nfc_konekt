@@ -36,6 +36,6 @@ export async function POST(req: Request) {
         if (error.code === 'P2002') {
             return NextResponse.json({ error: "Promo code already exists" }, { status: 400 });
         }
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return NextResponse.json({ error: "Could not create the promo code. Please try again." }, { status: 500 });
     }
 }

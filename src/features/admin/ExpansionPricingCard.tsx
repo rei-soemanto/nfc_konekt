@@ -14,7 +14,8 @@ export default function ExpansionPricingCard({ currentPrice }: { currentPrice: n
             await updateExpansionPrice(Number(price))
             setIsDirty(false)
         } catch (error) {
-            alert("Failed to update expansion price")
+            console.error('[ExpansionPricingCard.handleSave]', error)
+            alert("Could not save the expansion pack price. The previous price is still in effect — please try again.")
         } finally {
             setLoading(false)
         }

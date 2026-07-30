@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { scanBusinessCard, saveContact } from '@/actions/scan-physical'
+import { ACCEPT_ATTR } from '@/lib/upload-limits'
 
 export default function ScanCardPage() {
     const router = useRouter();
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [isScanning, setIsScanning] = useState(false);
+    const [scanError, setScanError] = useState<string | null>(null);
     const [scannedData, setScannedData] = useState<any>(null);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -24,12 +26,15 @@ export default function ScanCardPage() {
         const formData = new FormData();
         formData.append('file', file);
 
+        setScanError(null);
         const result = await scanBusinessCard(formData);
-        
+
         if (result.success) {
             setScannedData(result.data);
         } else {
-            alert("Could not scan card. Please try again.");
+            // Surface the specific reason (too large, unreadable, service down)
+            // rather than a blanket "try again".
+            setScanError(result.message);
         }
         setIsScanning(false);
     };
@@ -81,14 +86,24 @@ export default function ScanCardPage() {
                             <span className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-lg">
                                 {imagePreview ? "Retake Photo" : "Take Photo / Upload"}
                             </span>
-                            <input 
-                                type="file" 
-                                accept="image/*" 
+                            <input
+                                type="file"
+                                accept={ACCEPT_ATTR}
                                 capture="environment" // Opens back camera on mobile
-                                onChange={handleFileChange} 
-                                className="hidden" 
+                                onChange={handleFileChange}
+                                className="hidden"
                             />
                         </label>
+                    )}
+
+                    {scanError && !isScanning && (
+                        <p
+                            role="alert"
+                            className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-left text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400"
+                        >
+                            <i className="fa-solid fa-circle-exclamation mt-0.5"></i>
+                            <span>{scanError}</span>
+                        </p>
                     )}
                 </div>
             )}

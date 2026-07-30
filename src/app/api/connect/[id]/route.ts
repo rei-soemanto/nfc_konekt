@@ -20,7 +20,7 @@ export async function GET(
 
         return NextResponse.json(details);
     } catch (error) {
-        console.error("Connection Details API Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        console.error("[GET /api/connect/[id]]", error);
+        return NextResponse.json({ error: "Could not load that connection. Please try again." }, { status: 500 });
     }
 }

@@ -63,7 +63,8 @@ export default function ShipmentTracker({ status, trackingLink, transactionId }:
         try {
             await markShipmentReceived(transactionId);
         } catch (error) {
-            alert("Failed to update status.");
+            console.error('[ShipmentTracker.handleReceive]', error);
+            alert("Could not mark the shipment as received. Its status is unchanged — please try again.");
         } finally {
             setLoading(false);
         }

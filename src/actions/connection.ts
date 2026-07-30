@@ -54,8 +54,8 @@ export async function addToConnect(targetUserId: string) {
         revalidatePath('/dashboard/connect');
         return { success: true, message: "Connected successfully." };
     } catch (error) {
-        console.error("Connect Error:", error);
-        return { success: false, error: "Failed to connect." };
+        console.error("[addToConnect]", error);
+        return { success: false, error: "Could not add this person to your network. Please try again." };
     }
 }
 

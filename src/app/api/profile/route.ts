@@ -1,54 +1,65 @@
-import { NextResponse } from 'next/server'
 import { getAuthUserId } from '@/lib/auth'
 import { ProfileService } from '@/services/ProfileService'
-import fs from 'fs/promises';
-import path from 'path';
+import { err, fail, ok, toResponse } from '@/lib/result'
+import { avatarFileName, parseDataUrlImage, writeUpload } from '@/lib/upload'
 
 // GET: Fetch Data for Edit Screen
 export async function GET(req: Request) {
     const userId = await getAuthUserId(req);
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!userId) {
+        return toResponse(err('UNAUTHORIZED', 'Sign in to view your profile.'));
+    }
 
-    const profile = await ProfileService.getFullProfile(userId);
-    return NextResponse.json({ success: true, data: profile });
+    try {
+        const profile = await ProfileService.getFullProfile(userId);
+        if (!profile) {
+            return toResponse(err('NOT_FOUND', 'Your profile could not be found. It may have been deleted.'));
+        }
+        return toResponse(ok(profile));
+    } catch (error) {
+        return toResponse(fail('GET /api/profile', error, 'INTERNAL', 'Could not load your profile. Please try again.'));
+    }
 }
 
 // PATCH: Update Profile Fields
 export async function PATCH(req: Request) {
     const userId = await getAuthUserId(req);
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!userId) {
+        return toResponse(err('UNAUTHORIZED', 'Sign in to update your profile.'));
+    }
+
+    let body: { type?: string; [key: string]: unknown } | null;
+    try {
+        body = await req.json();
+    } catch {
+        return toResponse(err('VALIDATION', 'Request body is not valid JSON.'));
+    }
+
+    const { type, ...data } = body ?? {};
+
+    if (type !== 'PERSONAL' && type !== 'CORPORATE' && type !== 'ADDRESS') {
+        return toResponse(err('VALIDATION', `Unknown update type "${type}". Expected PERSONAL, CORPORATE or ADDRESS.`));
+    }
 
     try {
-        const body = await req.json();
-        const { type, ...data } = body;
-
         // Look for the base64 string under either avatarUrl or photo
         const imageString = data.avatarUrl || data.photo;
 
-        if (imageString && typeof imageString === 'string' && imageString.startsWith('data:image')) {
+        if (typeof imageString === 'string' && imageString.startsWith('data:')) {
+            // Validates the MIME against an allowlist and enforces the 5MB
+            // ceiling on DECODED bytes. The extension comes from the allowlist,
+            // never from the request, so it cannot contain path separators.
+            const parsed = parseDataUrlImage(imageString);
+            if (!parsed.ok) return toResponse(parsed);
 
-            // 1. Strip header and get details
-            const matches = imageString.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+            const written = await writeUpload(
+                avatarFileName(userId, parsed.data.ext),
+                parsed.data.buffer
+            );
+            if (!written.ok) return toResponse(written);
 
-            if (matches && matches.length === 3) {
-                const extension = matches[1] === 'jpeg' ? 'jpg' : matches[1];
-                const base64Data = matches[2];
-                const buffer = Buffer.from(base64Data, 'base64');
-
-                // 2. Generate a filename matching your old structure
-                const fileName = `avatar-${userId}-${Date.now()}.${extension}`;
-
-                // 3. Absolute path to host directory
-                const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-                const filePath = path.join(uploadDir, fileName);
-
-                // 4. Write to disk
-                await fs.writeFile(filePath, buffer);
-
-                // 5. Map to your true DB column name and clean up temp keys
-                data.avatarUrl = `/uploads/${fileName}`;
-                if (data.photo) delete data.photo;
-            }
+            data.avatarUrl = written.data;
+            if (data.photo) delete data.photo;
         }
 
         let result;
@@ -56,15 +67,16 @@ export async function PATCH(req: Request) {
             result = await ProfileService.updatePersonal(userId, data);
         } else if (type === 'CORPORATE') {
             result = await ProfileService.updateCorporate(userId, data);
-        } else if (type === 'ADDRESS') {
-            result = await ProfileService.updateAddress(userId, data);
         } else {
-            return NextResponse.json({ error: "Invalid Update Type" }, { status: 400 });
+            result = await ProfileService.updateAddress(userId, data);
         }
 
-        return NextResponse.json({ success: true, data: result });
-    } catch (error: any) {
-        console.error("Profile Update Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return toResponse(ok(result));
+    } catch (error) {
+        // updateCorporate throws when the caller lacks a Corporate plan.
+        if (error instanceof Error && error.message.startsWith('Unauthorized')) {
+            return toResponse(err('FORBIDDEN', 'A Corporate plan is required to edit company settings.'));
+        }
+        return toResponse(fail('PATCH /api/profile', error, 'INTERNAL', 'Could not save your profile changes. Please try again.'));
     }
 }

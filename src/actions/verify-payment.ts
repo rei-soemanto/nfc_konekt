@@ -42,10 +42,22 @@ export async function processSuccessfulPayment(orderId: string) {
         include: { user: true, plan: true }
     });
 
-    if (!tx) throw new Error("Transaction not found");
-    
+    if (!tx) {
+        throw new Error(`No transaction exists with payment id "${orderId}".`);
+    }
+
     // Already processed — idempotency guard
-    if (tx.status === 'PAID') return { alreadyProcessed: true };
+    if (tx.status === 'PAID') return { alreadyProcessed: true, emailFailures: [] as string[] };
+
+    // Validate BEFORE marking PAID. Every branch below dereferences tx.plan for
+    // the duration, so a missing plan would otherwise throw a TypeError after
+    // the transaction had already been recorded as paid.
+    const needsPlan = tx.type === 'NEW_SUBSCRIPTION' || tx.type === 'NEW' || tx.type === 'RENEW';
+    if (needsPlan && !tx.plan) {
+        throw new Error(
+            `Transaction "${orderId}" is type ${tx.type} but has no linked plan, so the subscription period cannot be calculated. It was left unpaid for manual review.`
+        );
+    }
 
     // A. Update Transaction Status
     await prisma.transaction.update({
@@ -99,48 +111,83 @@ export async function processSuccessfulPayment(orderId: string) {
     }
 
     // C. Create Users & Cards (from Transaction Manifest)
+    //
+    // Every failure below is reported rather than swallowed: by this point the
+    // customer has already been charged and the transaction marked PAID, so a
+    // silent failure here means they paid for team seats that never appeared —
+    // or whose owners never received a password.
+    const emailFailures: string[] = [];
+
     if (tx.pendingTeamData) {
-        const teamMembers = JSON.parse(tx.pendingTeamData);
+        let teamMembers: { fullName: string; email: string }[];
+        try {
+            teamMembers = JSON.parse(tx.pendingTeamData);
+        } catch (error) {
+            console.error(`[processSuccessfulPayment] order ${orderId}: pendingTeamData is not valid JSON — team members were NOT created`, error);
+            throw new Error(
+                `Payment for order ${orderId} was recorded, but the stored team roster was corrupt and no team members could be created. Manual follow-up required.`
+            );
+        }
+
+        if (!Array.isArray(teamMembers)) {
+            console.error(`[processSuccessfulPayment] order ${orderId}: pendingTeamData is not an array`);
+            throw new Error(
+                `Payment for order ${orderId} was recorded, but the stored team roster was not a list. Manual follow-up required.`
+            );
+        }
+
         for (const member of teamMembers) {
-            const existing = await prisma.user.findUnique({ where: { email: member.email } });
-            if (!existing) {
-                const randomPassword = randomBytes(8).toString('base64url').slice(0, 12);
-                const newUser = await prisma.user.create({
-                    data: {
-                        fullName: member.fullName,
-                        email: member.email,
-                        password: await hashPassword(randomPassword),
-                        role: 'USER',
-                        accountStatus: 'ACTIVE',
-                        emailVerified: true,
-                        parentId: tx.userId,
-                    }
+            const existing = await prisma.user.findUnique({
+                where: { email: member.email },
+                select: { id: true }
+            });
+            if (existing) continue;
+
+            const randomPassword = randomBytes(8).toString('base64url').slice(0, 12);
+            const newUser = await prisma.user.create({
+                data: {
+                    fullName: member.fullName,
+                    email: member.email,
+                    password: await hashPassword(randomPassword),
+                    role: 'USER',
+                    accountStatus: 'ACTIVE',
+                    emailVerified: true,
+                    parentId: tx.userId,
+                }
+            });
+            await prisma.card.create({
+                data: {
+                    slug: generateSlug(newUser.fullName),
+                    status: 'ACTIVE',
+                    userId: newUser.id
+                }
+            });
+
+            // The account exists now, so a mail failure must NOT abort the loop
+            // or undo the other members — but it must be visible. Without the
+            // credential email this member has no way to sign in.
+            try {
+                await sendTeamMemberCredentials({
+                    email: member.email,
+                    fullName: member.fullName,
+                    password: randomPassword,
+                    adminName: tx.user.fullName,
+                    companyName: tx.user.companyName ?? null,
+                    loginUrl: `${process.env.NEXT_PUBLIC_APP_URL}/auth/login`,
+                    subscriptionEndDate: calculateEndDate(tx.plan!.duration),
+                    planDuration: tx.plan!.duration,
                 });
-                await prisma.card.create({
-                    data: {
-                        slug: generateSlug(newUser.fullName),
-                        status: 'ACTIVE',
-                        userId: newUser.id
-                    }
-                });
-                try {
-                    const subscriptionEndDate = calculateEndDate(tx.plan!.duration);
-                    await sendTeamMemberCredentials({
-                        email: member.email,
-                        fullName: member.fullName,
-                        password: randomPassword,
-                        adminName: tx.user.fullName,
-                        companyName: tx.user.companyName ?? null,
-                        loginUrl: `${process.env.NEXT_PUBLIC_APP_URL}/auth/login`,
-                        subscriptionEndDate,
-                        planDuration: tx.plan!.duration,
-                    })
-                } catch {}
+            } catch (error) {
+                emailFailures.push(member.email);
+                console.error(
+                    `[processSuccessfulPayment] order ${orderId}: account created for ${member.email} but the credentials email failed to send — they cannot sign in until it is resent`,
+                    error
+                );
             }
         }
     }
 
-    return { alreadyProcessed: false };
+    return { alreadyProcessed: false, emailFailures };
 }
 
 // =============================================
@@ -150,15 +197,18 @@ export async function processSuccessfulPayment(orderId: string) {
 export async function verifyPayment(orderId: string) {
     try {
         const userId = await getAuthUserId();
-        if (!userId) return { error: "Unauthorized" };
+        if (!userId) return { error: "Your session has expired. Sign in again to confirm this payment." };
 
         // Security: Verify the transaction belongs to the logged-in user
         const tx = await prisma.transaction.findUnique({
             where: { paymentId: orderId }
         });
 
-        if (!tx) return { error: "Transaction not found" };
-        if (tx.userId !== userId) return { error: "Unauthorized" };
+        // Deliberately the same message for "missing" and "not yours" so this
+        // cannot be used to probe which order ids exist.
+        if (!tx || tx.userId !== userId) {
+            return { error: `No payment with reference "${orderId}" was found on your account.` };
+        }
 
         // Already processed — no need to hit Midtrans
         if (tx.status === 'PAID') return { success: true };
@@ -178,18 +228,32 @@ export async function verifyPayment(orderId: string) {
         }
 
         if (isPaid) {
-            await processSuccessfulPayment(orderId);
+            const outcome = await processSuccessfulPayment(orderId);
+            if (outcome.emailFailures.length > 0) {
+                // The payment and the accounts are fine; only the emails failed.
+                // Say so plainly rather than reporting a blanket success.
+                return {
+                    success: true,
+                    warning: `Your payment was successful, but we could not email login details to: ${outcome.emailFailures.join(', ')}. Please resend their invitations from the Team page.`
+                };
+            }
             return { success: true };
         } else if (transactionStatus === 'expire' || transactionStatus === 'cancel' || transactionStatus === 'deny') {
             await prisma.transaction.update({ where: { id: tx.id }, data: { status: 'EXPIRED' } });
-            return { error: "Payment was not successful" };
+            return {
+                error: transactionStatus === 'deny'
+                    ? "Your bank declined this payment. No charge was made — please try a different payment method."
+                    : `This payment was ${transactionStatus === 'expire' ? 'not completed in time' : 'cancelled'}. No charge was made — please start the checkout again.`
+            };
         }
 
         // Still pending (e.g. bank transfer waiting for payment)
         return { pending: true };
 
-    } catch (error: any) {
-        console.error("Verify Payment Error:", error);
-        return { error: "Failed to verify payment" };
+    } catch (error) {
+        console.error(`[verifyPayment] order ${orderId}`, error);
+        return {
+            error: "We could not confirm your payment right now. If you were charged, it will be applied automatically within a few minutes — please do not pay again."
+        };
     }
 }

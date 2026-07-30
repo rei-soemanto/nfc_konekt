@@ -68,6 +68,10 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
             }
         });
 
+        // The account exists at this point, so a mail failure must not undo it —
+        // but it must be reported: without this email the member has no password
+        // and cannot sign in.
+        let emailSent = true;
         try {
             await sendTeamMemberCredentials({
                 email: data.email,
@@ -79,10 +83,15 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
                 subscriptionEndDate: parent.subscription.endDate ?? null,
                 planDuration: parent.subscription.plan?.duration ?? 'MONTHLY',
             })
-        } catch {}
+        } catch (error) {
+            emailSent = false;
+            console.error(`[addMemberToTeam] account created for ${data.email} but the credentials email failed`, error);
+        }
 
         revalidatePath('/dashboard/team');
-        return { success: true, message: "Member added successfully." };
+        return emailSent
+            ? { success: true, message: `${data.fullName} was added and their login details have been emailed to ${data.email}.` }
+            : { success: true, message: `${data.fullName} was added, but we could not email their login details to ${data.email}. Use "Resend invitation" so they can sign in.` };
     }
 
     // 2. ADMIN WRITE: Create Transaction Record!
@@ -111,6 +120,9 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
             }
         });
 
+        // As above: the account already exists, so report the mail failure
+        // instead of swallowing it — otherwise the member cannot sign in.
+        let adminWriteEmailSent = true;
         try {
             await sendTeamMemberCredentials({
                 email: data.email,
@@ -122,7 +134,10 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
                 subscriptionEndDate: parent.subscription.endDate ?? null,
                 planDuration: parent.subscription.plan?.duration ?? 'MONTHLY',
             })
-        } catch {}
+        } catch (error) {
+            adminWriteEmailSent = false;
+            console.error(`[addMemberToTeam:ADMIN] account created for ${data.email} but the credentials email failed`, error);
+        }
 
         // C. CREATE TRANSACTION RECORD (Fixing the bug)
         // We create a "Paid" transaction of 0 amount just to track the shipment request
@@ -148,7 +163,9 @@ export async function addMemberToTeam(data: { fullName: string, email: string, w
         });
 
         revalidatePath('/dashboard/team');
-        return { success: true, message: "Shipment request sent to Admin." };
+        return adminWriteEmailSent
+            ? { success: true, message: `${data.fullName} was added and a card shipment request was sent to the admin.` }
+            : { success: true, message: `${data.fullName} was added and a shipment request was sent, but we could not email their login details to ${data.email}. Use "Resend invitation" so they can sign in.` };
     }
 }
 

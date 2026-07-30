@@ -237,8 +237,9 @@ export default function Error({
                 <p className="err-code">500</p>
                 <h1 className="err-title">Something Went Wrong</h1>
                 <p className="err-desc">
-                    An unexpected error occurred. Our team has been notified 
-                    and we&apos;re working on fixing it.
+                    An unexpected error occurred. Try again — if it keeps
+                    happening, please contact support
+                    {error.digest ? <> and quote reference <strong>{error.digest}</strong></> : null}.
                 </p>
 
                 <div className="err-actions">

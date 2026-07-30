@@ -50,8 +50,8 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
         })
 
     } catch (error) {
-        console.error("Login Error:", error)
-        return { message: "Something went wrong. Please try again." }
+        console.error("[login]", error)
+        return { message: "Could not sign you in right now. Please try again in a moment." }
     }
 
     redirect('/dashboard')
@@ -101,7 +101,7 @@ export async function signup(prevState: AuthState, formData: FormData): Promise<
             }
         }
 
-        return { message: "Failed to create account." }
+        return { message: "Could not create your account. No account was created — please try again." }
     }
 }
 

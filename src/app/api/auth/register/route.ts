@@ -33,6 +33,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Email is already registered" }, { status: 409 });
         }
 
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return NextResponse.json({ error: "Could not create your account. Please try again in a moment." }, { status: 500 });
     }
 }

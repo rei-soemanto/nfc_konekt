@@ -22,9 +22,14 @@ export default function AddMemberForm({ disabled }: { disabled: boolean }) {
                 alert(res.message);
                 setIsOpen(false);
                 setForm({ fullName: '', email: '', writeMethod: 'SELF' });
+            } else {
+                // Previously this branch did nothing, so a rejected add (team
+                // limit reached, duplicate email) looked like it had worked.
+                alert(res?.message ?? `Could not add ${form.fullName || 'that member'} to your team. Please try again.`);
             }
         } catch (error) {
-            alert("Failed to add member.");
+            console.error('[AddMemberForm.handleSubmit]', error);
+            alert(`Could not add ${form.fullName || 'that member'} to your team. No account was created — please try again.`);
         } finally {
             setLoading(false);
         }

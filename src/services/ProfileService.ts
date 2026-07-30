@@ -1,5 +1,37 @@
 import { prisma } from '@/lib/prisma'
 
+/**
+ * Every User column EXCEPT `password`.
+ *
+ * Using an explicit allowlist rather than `include` means a future column
+ * added to the schema is opt-in here, so a new secret can never start
+ * flowing to the client just because someone edited schema.prisma.
+ */
+export const SAFE_USER_FIELDS = {
+    id: true,
+    fullName: true,
+    email: true,
+    phone: true,
+    companyName: true,
+    companyWebsite: true,
+    avatarUrl: true,
+    bio: true,
+    role: true,
+    accountStatus: true,
+    emailVerified: true,
+    parentId: true,
+    companyScope: true,
+    companySpeciality: true,
+    companyDescription: true,
+    companyLogoUrl: true,
+    jobTitle: true,
+    isCompanyPublic: true,
+    tempSetupData: true,
+    tempDesignData: true,
+    createdAt: true,
+    updatedAt: true,
+} as const
+
 export class ProfileService {
     /**
      * 1. GET FULL PROFILE (For the Edit Screen)
@@ -7,7 +39,8 @@ export class ProfileService {
     static async getFullProfile(userId: string) {
         return await prisma.user.findUnique({
             where: { id: userId },
-            include: {
+            select: {
+                ...SAFE_USER_FIELDS,
                 address: true,
                 subscription: { include: { plan: true } },
                 socialLinks: true
@@ -21,6 +54,7 @@ export class ProfileService {
     static async updatePersonal(userId: string, data: any) {
         return await prisma.user.update({
             where: { id: userId },
+            select: SAFE_USER_FIELDS,
             data: {
                 // By using the spread operator, we only attempt to update fields 
                 // that were actually sent in the payload and aren't explicitly null
@@ -72,9 +106,12 @@ export class ProfileService {
      * (Only for Corporate Admins)
      */
     static async updateCorporate(userId: string, data: any) {
-        const user = await prisma.user.findUnique({ 
+        const user = await prisma.user.findUnique({
             where: { id: userId },
-            include: { subscription: { include: { plan: true } } }
+            select: {
+                role: true,
+                subscription: { select: { plan: { select: { category: true } } } }
+            }
         });
 
         const isCorporate = user?.role === 'ADMIN' || user?.subscription?.plan.category === 'CORPORATE';
@@ -85,6 +122,7 @@ export class ProfileService {
 
         return await prisma.user.update({
             where: { id: userId },
+            select: SAFE_USER_FIELDS,
             data: {
                 ...(data.companyName != null && { companyName: data.companyName }),
                 ...(data.companyWebsite != null && { companyWebsite: data.companyWebsite }),

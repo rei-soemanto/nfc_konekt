@@ -15,16 +15,23 @@ type Props = {
 
 export default function MemberEditModal({ member, onClose }: Props) {
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [jobTitle, setJobTitle] = useState(member.jobTitle || '');
     const [isPublic, setIsPublic] = useState(member.isCompanyPublic);
 
     const handleSave = async () => {
         setLoading(true);
+        setError(null);
         try {
-            await updateEmployeeRole(member.id, jobTitle, isPublic);
+            const result = await updateEmployeeRole(member.id, jobTitle, isPublic);
+            if (!result.ok) {
+                setError(result.message);
+                return;
+            }
             onClose(); // Close modal on success (page will revalidate)
-        } catch (error) {
-            alert("Failed to update member.");
+        } catch (err) {
+            console.error('[MemberEditModal.handleSave]', err);
+            setError(`Could not reach the server, so ${member.fullName}'s details were not saved. Check your connection and try again.`);
         } finally {
             setLoading(false);
         }
@@ -62,6 +69,16 @@ export default function MemberEditModal({ member, onClose }: Props) {
                         </label>
                     </div>
                 </div>
+
+                {error && (
+                    <p
+                        role="alert"
+                        className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400"
+                    >
+                        <i className="fa-solid fa-circle-exclamation mt-0.5"></i>
+                        <span>{error}</span>
+                    </p>
+                )}
 
                 <div className="flex justify-end gap-3 mt-6">
                     <button onClick={onClose} className="px-4 py-2 text-gray-500 hover:text-gray-700 font-bold text-sm">Cancel</button>

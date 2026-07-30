@@ -55,7 +55,8 @@ export default function TeamSetupForm({ planId, packs, maxSeats, isExpansion = f
             const modeParam = isExpansion ? '&mode=expansion' : '';
             router.push(`/dashboard/subscription/design?planId=${planId}&packs=${packs}${modeParam}`);
         } catch (error) {
-            alert("Failed to save team data");
+            console.error('[TeamSetupForm.handleSubmit]', error);
+            alert("Could not save your team list. It was not stored — please try again before continuing to checkout.");
             setLoading(false);
         }
     };

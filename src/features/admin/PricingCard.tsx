@@ -20,7 +20,8 @@ export default function PricingCard({ plan }: Props) {
             await updatePlanPrice(plan.id, Number(price))
             setIsDirty(false)
         } catch (error) {
-            alert("Failed to update price")
+            console.error('[PricingCard.handleSave]', error)
+            alert(`Could not save the new price for "${plan.name}". The previous price is still in effect — please try again.`)
         } finally {
             setLoading(false)
         }

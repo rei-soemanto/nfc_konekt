@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { updateCompanyProfile } from '@/actions/corporate'
 import Select from 'react-select'
 import { INDUSTRY_OPTIONS, SPECIALITY_OPTIONS } from '@/config/company-options' // <--- Import from Lib
+import { ACCEPTED_IMAGE_TYPES, ACCEPT_ATTR, MAX_UPLOAD_BYTES as MAX_LOGO_BYTES } from '@/lib/upload-limits'
 
 type Props = {
     initialData: {
@@ -16,7 +17,9 @@ type Props = {
 
 export default function CompanyProfileForm({ initialData }: Props) {
     const [loading, setLoading] = useState(false);
-    
+    const [error, setError] = useState<string | null>(null);
+    const [saved, setSaved] = useState(false);
+
     // State for Logo
     const [logoPreview, setLogoPreview] = useState<string | null>(initialData.logoUrl || null);
     const [logoBase64, setLogoBase64] = useState<string | null>(null); // To store the actual string to send
@@ -32,11 +35,17 @@ export default function CompanyProfileForm({ initialData }: Props) {
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Check file size (e.g., limit to 2MB to prevent DB issues)
-            if (file.size > 2 * 1024 * 1024) {
-                alert("File is too large. Max size is 2MB.");
+            // Mirrors the server-side guard in updateCompanyProfile.
+            // This check is a convenience only — the server re-validates.
+            if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+                setError(`"${file.type || 'that file type'}" is not supported. Please choose a JPEG, PNG, WebP or GIF image.`);
                 return;
             }
+            if (file.size > MAX_LOGO_BYTES) {
+                setError(`Logo is ${(file.size / (1024 * 1024)).toFixed(1)}MB. Maximum size is 5MB.`);
+                return;
+            }
+            setError(null);
 
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -61,12 +70,19 @@ export default function CompanyProfileForm({ initialData }: Props) {
             logoUrl: logoBase64, // Send the Base64 string if it changed
         };
 
+        setError(null);
+        setSaved(false);
+
         try {
-            await updateCompanyProfile(data);
-            alert("Company profile updated!");
+            const result = await updateCompanyProfile(data);
+            if (!result.ok) {
+                setError(result.message);
+                return;
+            }
+            setSaved(true);
         } catch (error) {
-            console.error(error);
-            alert("Failed to update.");
+            console.error('[CompanyProfileForm.handleSubmit]', error);
+            setError("Could not reach the server. Your company profile was not saved — please check your connection and try again.");
         } finally {
             setLoading(false);
         }
@@ -149,13 +165,13 @@ export default function CompanyProfileForm({ initialData }: Props) {
                             )}
                         </div>
                         <div className="flex-1">
-                            <input 
-                                type="file" 
-                                accept="image/*"
+                            <input
+                                type="file"
+                                accept={ACCEPT_ATTR}
                                 onChange={handleLogoChange}
                                 className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-200 dark:file:bg-indigo-900/30 dark:file:text-indigo-400"
                             />
-                            <p className="mt-1 text-xs text-gray-400">PNG, JPG, or GIF up to 2MB</p>
+                            <p className="mt-1 text-xs text-gray-400">PNG, JPG, WebP, or GIF up to 5MB</p>
                         </div>
                     </div>
                 </div>
@@ -205,7 +221,27 @@ export default function CompanyProfileForm({ initialData }: Props) {
                     />
                 </div>
 
-                <button 
+                {error && (
+                    <p
+                        role="alert"
+                        className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400"
+                    >
+                        <i className="fa-solid fa-circle-exclamation mt-0.5"></i>
+                        <span>{error}</span>
+                    </p>
+                )}
+
+                {saved && (
+                    <p
+                        role="status"
+                        className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-400"
+                    >
+                        <i className="fa-solid fa-circle-check mt-0.5"></i>
+                        <span>Company profile saved.</span>
+                    </p>
+                )}
+
+                <button
                     type="submit"
                     disabled={loading}
                     className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-colors shadow-lg shadow-indigo-500/30 flex items-center"

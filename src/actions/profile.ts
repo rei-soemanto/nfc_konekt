@@ -4,8 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUserId } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import fs from 'fs/promises'
-import path from 'path'
+import { avatarFileName, validateImageFile, writeUpload } from '@/lib/upload'
 
 // 1. Update Zod Schema
 const profileSchema = z.object({
@@ -61,30 +60,41 @@ export async function updateProfile(prevState: any, formData: FormData) {
 
         // --- BINARY FILE UPLOAD HANDLER ---
         const avatarFile = formData.get('avatar') as File | null;
-        
+
         if (avatarFile && avatarFile.size > 0 && typeof avatarFile.arrayBuffer === 'function') {
-            // Extract file extension (fallback to jpg if missing)
-            const ext = avatarFile.name.split('.').pop() || 'jpg';
-            const fileName = `avatar-${userId}-${Date.now()}.${ext}`;
-            
-            const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-            const filePath = path.join(uploadDir, fileName);
+            // Enforces the MIME allowlist and the 5MB ceiling. The extension is
+            // derived from the allowlist, never from avatarFile.name, which is
+            // attacker-controlled and could otherwise contain path separators.
+            const validated = validateImageFile(avatarFile);
+            if (!validated.ok) {
+                return { success: false, message: validated.message };
+            }
 
-            // Read binary stream data straight out of the Server Action stream
             const bytes = await avatarFile.arrayBuffer();
-            const buffer = Buffer.from(bytes);
+            const written = await writeUpload(
+                avatarFileName(userId, validated.data.ext),
+                Buffer.from(bytes)
+            );
+            if (!written.ok) {
+                return { success: false, message: written.message };
+            }
 
-            // Write raw binary data directly to disk
-            await fs.writeFile(filePath, buffer);
-
-            // Set the string value to match your true database column name
-            updateData.avatarUrl = `/uploads/${fileName}`;
+            updateData.avatarUrl = written.data;
         }
         // ----------------------------------
 
         // 4. Handle Social Links
         if (socials) {
-            const parsedSocials = JSON.parse(socials);
+            let parsedSocials: { platform: string; url: string }[];
+            try {
+                parsedSocials = JSON.parse(socials);
+            } catch {
+                return { success: false, message: "Social links were malformed and could not be saved. Please re-enter them." };
+            }
+            if (!Array.isArray(parsedSocials)) {
+                return { success: false, message: "Social links must be a list. Please re-enter them." };
+            }
+
             await prisma.socialLink.deleteMany({ where: { userId } });
             if (parsedSocials.length > 0) {
                 await prisma.socialLink.createMany({
@@ -107,7 +117,10 @@ export async function updateProfile(prevState: any, formData: FormData) {
         return { success: true, message: "Profile updated successfully" };
 
     } catch (error) {
-        console.error("Profile Update Error:", error);
-        return { success: false, message: "Failed to update profile" };
+        console.error("[updateProfile]", error);
+        return {
+            success: false,
+            message: "Could not save your profile. Your changes were not applied — please try again."
+        };
     }
 }

@@ -21,7 +21,7 @@ export async function GET(request: Request) {
         });
 
     } catch (error) {
-        console.error("History API Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        console.error("[GET /api/history]", error);
+        return NextResponse.json({ error: "Could not load your scan history. Please try again." }, { status: 500 });
     }
 }

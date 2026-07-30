@@ -57,8 +57,8 @@ export default function SubscriptionPlans({ plans, userId }: { plans: Plan[], us
                 });
             }
         } catch (error) {
-            console.error(error);
-            alert("Failed to process transaction.");
+            console.error('[SubscriptionPlans.handleSelectPlan]', error);
+            alert("Could not start the checkout. You have not been charged — please try again in a moment.");
         } finally {
             setLoading(null);
         }

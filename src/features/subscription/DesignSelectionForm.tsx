@@ -54,8 +54,8 @@ export default function DesignSelectionForm({ planId, packs, mode, userData }: P
             const modeParam = mode ? `&mode=${mode}` : '';
             router.push(`/dashboard/subscription/checkout?planId=${planId}&packs=${packs}${modeParam}`);
         } catch (error) {
-            console.error(error);
-            alert("Failed to save design selection");
+            console.error('[DesignSelectionForm.handleContinue]', error);
+            alert("Could not save your card design. Your selection was not stored — please try again.");
         } finally {
             setLoading(false);
         }

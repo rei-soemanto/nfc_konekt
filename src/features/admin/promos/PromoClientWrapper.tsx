@@ -48,10 +48,20 @@ export default function PromoClientWrapper({ initialPromos }: { initialPromos: a
         
         setIsDeleting(id);
         try {
-            await fetch(`/api/admin/promos/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/admin/promos/${id}`, { method: 'DELETE' });
+
+            // fetch only rejects on network failure — a 403 or 500 resolves
+            // normally, so without this check a failed delete silently
+            // refreshed the page as though it had worked.
+            if (!res.ok) {
+                const body = await res.json().catch(() => null);
+                alert(body?.error ?? `Could not delete that promo code (server returned ${res.status}). It has not been removed.`);
+                return;
+            }
             router.refresh();
         } catch (error) {
-            alert("Failed to delete promo");
+            console.error('[PromoClientWrapper.handleDelete]', error);
+            alert("Could not reach the server, so the promo code was not deleted. Check your connection and try again.");
         } finally {
             setIsDeleting(null);
         }

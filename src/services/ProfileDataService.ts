@@ -13,20 +13,54 @@ export class ProfileDataService {
 
         const viewer = await prisma.user.findUnique({
             where: { id: this.viewerId },
-            include: { subscription: true, parent: { include: { subscription: true } } }
+            select: {
+                subscription: { select: { status: true } },
+                parent: { select: { subscription: { select: { status: true } } } }
+            }
         });
         const sub = viewer?.subscription || viewer?.parent?.subscription;
         return !!(sub && sub.status === 'ACTIVE');
     }
 
-    // Fetch the full profile of a target user, including corporate context
+    // Fetch the full profile of a target user, including corporate context.
+    //
+    // Explicit `select` rather than `include`: this returns ANOTHER user's
+    // record (and their corporate parent's), so the password hash must never
+    // be in the object at all. An allowlist means a new schema column cannot
+    // start flowing out of here by default.
     async getTargetUserProfile(targetUserId: string) {
         const user = await prisma.user.findUnique({
             where: { id: targetUserId },
-            include: {
+            select: {
+                id: true,
+                fullName: true,
+                email: true,
+                phone: true,
+                avatarUrl: true,
+                bio: true,
+                jobTitle: true,
+                companyName: true,
+                companyWebsite: true,
+                companyScope: true,
+                companySpeciality: true,
+                companyDescription: true,
+                companyLogoUrl: true,
+                isCompanyPublic: true,
+                parentId: true,
                 socialLinks: true,
-                parent: true,
                 address: true,
+                parent: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        companyName: true,
+                        companyWebsite: true,
+                        companyScope: true,
+                        companySpeciality: true,
+                        companyDescription: true,
+                        companyLogoUrl: true,
+                    }
+                },
             }
         });
         return user;
