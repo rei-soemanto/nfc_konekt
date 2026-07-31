@@ -41,19 +41,22 @@ export default function TeamList({ members, isReadOnly = false }: { members: any
                 </div>
                 <div className="divide-y divide-gray-100 dark:divide-gray-800">
                     {members.map((member) => (
-                        <div key={member.id} className="p-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-200 dark:border-indigo-800">
+                        <div key={member.id} className="p-4 sm:p-6 flex items-center justify-between gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            {/* min-w-0 is required on every flex ancestor of a truncating
+                                child — without it the row's intrinsic width grows with the
+                                email and pushes the action buttons out of the clipped card. */}
+                            <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+                                <div className="w-10 h-10 shrink-0 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-200 dark:border-indigo-800">
                                     {member.avatarUrl ? (
                                         <img src={member.avatarUrl} className="w-full h-full object-cover rounded-full" />
                                     ) : (
                                         member.fullName.charAt(0).toUpperCase()
                                     )}
                                 </div>
-                                <div>
-                                    <h4 className="font-medium text-gray-900 dark:text-white">{member.fullName}</h4>
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">{member.email}</p>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="truncate font-medium text-gray-900 dark:text-white">{member.fullName}</h4>
+                                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                        <p className="truncate max-w-full text-sm text-gray-500 dark:text-gray-400">{member.email}</p>
                                         
                                         {/* Display Role Badge */}
                                         {member.jobTitle && (
@@ -72,8 +75,11 @@ export default function TeamList({ members, isReadOnly = false }: { members: any
                                 </div>
                             </div>
                             
-                            <div className="flex items-center gap-4">
-                                <span className="px-3 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
+                            {/* shrink-0 keeps the controls reachable no matter how long
+                                the name/email is — previously they were clipped away by
+                                the card's overflow-hidden and became untappable. */}
+                            <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+                                <span className="hidden sm:inline-block px-3 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
                                     Active
                                 </span>
 

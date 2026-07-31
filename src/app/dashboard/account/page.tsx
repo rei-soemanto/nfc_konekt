@@ -47,8 +47,10 @@ export default async function AccountPage() {
     const isCorporateAdmin = 
         user.subscription?.plan?.category === 'CORPORATE';
 
+    // No px-* on the wrapper below: the dashboard shell (dashboard/layout.tsx)
+    // already applies p-4 md:p-8, and stacking both cost 64px of a 375px viewport.
     return (
-        <div className="max-w-4xl mx-auto py-8 space-y-12 px-4">
+        <div className="max-w-4xl mx-auto py-8 space-y-12">
             {/* Section 1: Public Profile */}
             <section>
                 <div className="mb-6">

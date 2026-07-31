@@ -4,9 +4,10 @@ import { useActionState, useState } from 'react'
 import { login, signup } from '@/actions/auth'
 import { Input } from '@/components/ui/Input'
 import { SubmitButton } from '@/components/ui/Button'
+import { DEFAULT_POST_LOGIN, NEXT_PARAM } from '@/lib/session-config'
 
 // --- 1. Sub-Component: Sign Up Form ---
-function SignUpForm({ isActive }: { isActive: boolean }) {
+function SignUpForm({ isActive, next }: { isActive: boolean; next?: string }) {
     const [state, action] = useActionState(signup, undefined)
 
     return (
@@ -24,7 +25,11 @@ function SignUpForm({ isActive }: { isActive: boolean }) {
         `}>
             <form action={action} className="bg-white dark:bg-gray-900 flex flex-col items-center justify-center w-full h-full px-10 text-center transition-colors duration-300">
                 <h1 className="text-2xl md:text-3xl font-bold mb-4 text-gray-800 dark:text-white">Create Account</h1>
-                
+                {/* Signup cannot log in until the email is verified, so this field
+                    is belt-and-braces — the post_auth_next cookie set by the /auth
+                    page is what actually survives that round trip. */}
+                {next && <input type="hidden" name={NEXT_PARAM} value={next} />}
+
                 <div className="w-full space-y-3 text-left overflow-y-auto max-h-[80%] md:max-h-none py-2 px-1 custom-scrollbar">
                     {/* Success Message (Verification Email Sent) */}
                     {state?.success && state?.message && (
@@ -58,7 +63,7 @@ function SignUpForm({ isActive }: { isActive: boolean }) {
 }
 
 // --- 2. Sub-Component: Sign In Form ---
-function SignInForm({ isActive }: { isActive: boolean }) {
+function SignInForm({ isActive, next }: { isActive: boolean; next?: string }) {
     const [state, action] = useActionState(login, undefined)
 
     return (
@@ -76,6 +81,8 @@ function SignInForm({ isActive }: { isActive: boolean }) {
         `}>
             <form action={action} className="bg-white dark:bg-gray-900 flex flex-col items-center justify-center w-full h-full px-10 text-center transition-colors duration-300">
                 <h1 className="text-2xl md:text-3xl font-bold mb-4 text-gray-800 dark:text-white">Sign In</h1>
+                {/* Server-side safeNext() re-validates this before redirecting. */}
+                {next && <input type="hidden" name={NEXT_PARAM} value={next} />}
                 <div className="w-full space-y-4 text-left overflow-y-auto max-h-[80%] md:max-h-none py-2 px-1 custom-scrollbar">
                     {state?.message && (
                         <p className="text-red-500 text-sm text-center bg-red-50 dark:bg-red-900/20 p-2 rounded">{state.message}</p>
@@ -182,14 +189,32 @@ function Overlay({ isSignupMode, onToggle }: { isSignupMode: boolean, onToggle: 
 }
 
 // --- 4. Main Component ---
-export default function AuthCard() {
+type AuthCardProps = {
+    /** Same-origin path to return to after a successful sign in. */
+    next?: string
+    /** Whether the return target should also trigger a connect on arrival. */
+    connectAfter?: boolean
+}
+
+export default function AuthCard({ next, connectAfter = false }: AuthCardProps) {
     const [isSignupMode, setIsSignupMode] = useState(false)
+
+    // Start on the sign-up panel when the visitor was sent here to create an
+    // account before connecting — saves them a click.
+    const [hasReturnTarget] = useState(Boolean(next && next !== DEFAULT_POST_LOGIN))
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-950 px-4 py-8 transition-colors duration-300">
             <div className="relative overflow-hidden w-full max-w-[850px] h-[600px] md:min-h-[550px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl dark:shadow-indigo-900/20">
-                <SignUpForm isActive={isSignupMode} />
-                <SignInForm isActive={isSignupMode} />
+                {hasReturnTarget && (
+                    <p className="absolute inset-x-0 top-0 z-60 bg-indigo-600 px-4 py-2 text-center text-xs font-medium text-white">
+                        {connectAfter
+                            ? 'Sign in to connect — we’ll take you straight back.'
+                            : 'Sign in to continue where you left off.'}
+                    </p>
+                )}
+                <SignUpForm isActive={isSignupMode} next={next} />
+                <SignInForm isActive={isSignupMode} next={next} />
                 <Overlay isSignupMode={isSignupMode} onToggle={() => setIsSignupMode(!isSignupMode)} />
             </div>
         </div>

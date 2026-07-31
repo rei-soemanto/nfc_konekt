@@ -135,22 +135,19 @@ export default async function DashboardPage() {
                 <p className="text-gray-500 dark:text-gray-400 mt-1">Welcome back! Here's what's happening with your network.</p>
             </div>
 
-            <StatsGrid stats={{
-                totalScansMade,
-                totalScansReceived,
-                totalFriends: totalConnections, // Pass as totalFriends if StatsGrid expects that prop name
-                friendConversionRate: conversionRate
-            }} />
+            {/*
+                Flex column on mobile, 3-col grid from lg up.
+                order-* drives the mobile stacking (profile card first); the explicit
+                lg:row-start / lg:col-start reproduce the previous desktop layout
+                exactly — stats full-width on row 1, activity + sidebar on row 2.
+                StatsGrid had to move inside this container so CSS order can reach it;
+                order only reorders siblings.
+            */}
+            <div className="flex flex-col gap-8 lg:grid lg:grid-cols-3">
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Main Content (Activity Feed) */}
-                <div className="lg:col-span-2 flex flex-col">
-                    <RecentActivity activities={formattedRecent} />
-                </div>
+                {/* Sidebar — first on mobile, right column on desktop */}
+                <div className="order-1 space-y-6 lg:col-start-3 lg:row-start-2">
 
-                {/* Sidebar */}
-                <div className="space-y-6">
-                    
                     {/* Dynamic Quick Profile Card */}
                     <QuickProfileCard user={userData} card={activeCard} />
 
@@ -172,6 +169,21 @@ export default async function DashboardPage() {
                             </a>
                         </div>
                     </div>
+                </div>
+
+                {/* Stats — second on mobile, full-width top row on desktop */}
+                <div className="order-2 lg:col-span-3 lg:col-start-1 lg:row-start-1">
+                    <StatsGrid stats={{
+                        totalScansMade,
+                        totalScansReceived,
+                        totalFriends: totalConnections, // Pass as totalFriends if StatsGrid expects that prop name
+                        friendConversionRate: conversionRate
+                    }} />
+                </div>
+
+                {/* Activity feed — last on mobile, left 2 columns on desktop */}
+                <div className="order-3 flex flex-col lg:col-span-2 lg:col-start-1 lg:row-start-2">
+                    <RecentActivity activities={formattedRecent} />
                 </div>
             </div>
         </div>

@@ -43,8 +43,10 @@ export default function StatsGrid({ stats }: { stats: DashboardStats }) {
         },
     ]
 
+    // No bottom margin here: the dashboard page owns vertical spacing via gap-8
+    // on its layout container, so a margin would double it.
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {items.map((item, idx) => (
                 <div key={idx} className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow duration-300">
                     <div className="flex justify-between items-start mb-4">

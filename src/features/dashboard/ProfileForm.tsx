@@ -75,7 +75,9 @@ export default function ProfileForm({ user }: { user: UserProfileData }) {
                     )}
 
                     {/* --- AVATAR UPLOAD SECTION --- */}
-                    <div className="flex items-center space-x-6 pb-8 border-b border-gray-100 dark:border-gray-800">
+                    {/* Stacks on mobile: a 96px avatar plus the button row needs more
+                        width than 375px leaves after the nested page/card padding. */}
+                    <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:gap-6 sm:text-left pb-8 border-b border-gray-100 dark:border-gray-800">
                         <div className="shrink-0 relative">
                             <div className="h-24 w-24 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-3xl font-bold text-indigo-600 dark:text-indigo-400 border-4 border-white dark:border-gray-800 shadow-lg overflow-hidden">
                                 {previewUrl ? (
@@ -85,7 +87,7 @@ export default function ProfileForm({ user }: { user: UserProfileData }) {
                                 )}
                             </div>
                         </div>
-                        <div>
+                        <div className="min-w-0 flex-1">
                             <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">Profile Photo</label>
                             
                             {/* Hidden Inputs */}
@@ -99,9 +101,9 @@ export default function ProfileForm({ user }: { user: UserProfileData }) {
                             />
                             <input type="hidden" name="removeAvatar" value={removeAvatar ? 'true' : 'false'} />
 
-                            <div className="flex gap-3">
-                                <button 
-                                    type="button" 
+                            <div className="flex flex-wrap justify-center gap-3 sm:justify-start">
+                                <button
+                                    type="button"
                                     onClick={handleAvatarClick}
                                     className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
                                 >

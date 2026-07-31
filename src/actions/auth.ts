@@ -4,6 +4,14 @@ import { SignJWT } from 'jose'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { AuthService } from '@/services/AuthService' // Import the new Service
+import {
+    DEFAULT_POST_LOGIN,
+    NEXT_COOKIE,
+    NEXT_PARAM,
+    SESSION_JWT_EXPIRY,
+    SESSION_MAX_AGE,
+    safeNext,
+} from '@/lib/session-config'
 
 export type AuthState = {
     success?: boolean
@@ -25,6 +33,10 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
         return { message: "Please enter both email and password." }
     }
 
+    // Resolved inside the try, used by the redirect after it — redirect() throws
+    // a control-flow signal, so it must never sit inside the try block.
+    let destination = DEFAULT_POST_LOGIN
+
     try {
         // REFACTOR: Use Service instead of direct Prisma/Bcrypt calls
         const user = await AuthService.validateUser(email, password)
@@ -34,10 +46,13 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
         }
 
         // Create Session Token (Web Context uses 'jose' for Edge compatibility)
+        // JWT expiry and cookie maxAge are driven by the same constant — if they
+        // drift apart the token dies while the cookie lingers, which reads to the
+        // user as a silent, unexplained logout.
         const secret = new TextEncoder().encode(process.env.JWT_SECRET_KEY)
         const token = await new SignJWT({ userId: user.id, role: user.role })
             .setProtectedHeader({ alg: 'HS256' })
-            .setExpirationTime('7d')
+            .setExpirationTime(SESSION_JWT_EXPIRY)
             .sign(secret)
 
         const cookieStore = await cookies()
@@ -46,15 +61,26 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
             path: '/',
-            maxAge: 60 * 60 * 24 * 7 // 7 days
+            maxAge: SESSION_MAX_AGE
         })
+
+        // Where to go next: the form field wins, otherwise the cookie dropped when
+        // /auth was first opened (that one survives the sign-up -> verify-email ->
+        // log-in round trip, where the original query string is lost).
+        const fromForm = formData.get(NEXT_PARAM)
+        const fromCookie = cookieStore.get(NEXT_COOKIE)?.value
+        destination = safeNext(fromForm ?? fromCookie)
+
+        if (fromCookie) {
+            cookieStore.delete(NEXT_COOKIE)
+        }
 
     } catch (error) {
         console.error("[login]", error)
         return { message: "Could not sign you in right now. Please try again in a moment." }
     }
 
-    redirect('/dashboard')
+    redirect(destination)
 }
 
 // --- 2. SIGNUP ACTION ---

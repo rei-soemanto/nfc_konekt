@@ -69,15 +69,18 @@ export default function SecuritySettings() {
                         <p className="font-semibold text-gray-900 dark:text-white mb-4">
                             Are you absolutely sure? This cannot be undone.
                         </p>
-                        <div className="flex gap-3">
-                            <form action={deleteAccount}>
-                                <button className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg">
+                        {/* Stacked on mobile: side by side these two labels need ~280px
+                            but only ~231px survives the nested padding at 375px, which
+                            pushed the whole page into horizontal scroll. */}
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                            <form action={deleteAccount} className="w-full sm:w-auto">
+                                <button className="w-full sm:w-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg">
                                     Yes, Delete My Account
                                 </button>
                             </form>
-                            <button 
+                            <button
                                 onClick={() => setIsDeleteOpen(false)}
-                                className="px-4 py-2 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-lg hover:bg-gray-300"
+                                className="w-full sm:w-auto px-4 py-2 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-lg hover:bg-gray-300"
                             >
                                 Cancel
                             </button>

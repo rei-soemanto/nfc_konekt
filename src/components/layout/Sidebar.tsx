@@ -95,17 +95,20 @@ export function Sidebar({ user, newTxCount = 0 }: { user: UserProps, newTxCount?
     return (
         <>
             {/* ✅ MOBILE HEADER (Fixed Top) */}
-            <div className="md:hidden w-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center p-4 sticky top-0 z-40 shadow-sm">
-                <Link href="/" className="flex items-center text-xl font-bold text-indigo-600 dark:text-indigo-500">
-                    <i className="fa-solid fa-wifi mr-2"></i>
-                    NFC Konekt
-                </Link>
-                <button 
+            <div className="md:hidden w-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center gap-3 p-4 sticky top-0 z-40 shadow-sm">
+                {/* Toggle sits FIRST so justify-between anchors it left, matching the
+                    drawer below which slides in from the left edge (left-0 / -translate-x-full). */}
+                <button
                     onClick={() => setIsMobileOpen(true)}
-                    className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                    aria-label="Open menu"
+                    className="shrink-0 p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                 >
                     <i className="fa-solid fa-bars text-xl"></i>
                 </button>
+                <Link href="/" className="flex min-w-0 items-center text-xl font-bold text-indigo-600 dark:text-indigo-500">
+                    <i className="fa-solid fa-wifi mr-2 shrink-0"></i>
+                    <span className="truncate">NFC Konekt</span>
+                </Link>
             </div>
 
             {/* ✅ MOBILE OVERLAY (Backdrop) */}

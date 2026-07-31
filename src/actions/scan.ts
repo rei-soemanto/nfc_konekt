@@ -47,19 +47,14 @@ export async function connectUser(targetUserId: string) {
         return { success: false, error: "You cannot add yourself." };
     }
 
-    // 3. SUBSCRIPTION CHECK (New Requirement)
-    const user = await prisma.user.findUnique({
-        where: { id: currentUserId },
-        include: { subscription: true, parent: { include: { subscription: true } } }
-    });
-    const sub = user?.subscription || user?.parent?.subscription;
-    
-    if (!sub || sub.status !== 'ACTIVE') {
-        return { success: false, error: "Subscription required to connect." };
-    }
+    // NOTE: there is deliberately no subscription check here.
+    // Scanning a card and saving the person is the core loop of the product, and
+    // gating it blocked the sign-up -> return -> connect flow entirely: a brand
+    // new account has no subscription, so its very first action always failed.
+    // Subscriptions still gate cards, team seats and the NFC writer.
 
     try {
-        // 4. Check if already connected (Using correct 'userId_targetId' unique constraint)
+        // 3. Check if already connected (Using correct 'userId_targetId' unique constraint)
         const existing = await prisma.connection.findUnique({
             where: {
                 userId_targetId: {
@@ -69,11 +64,15 @@ export async function connectUser(targetUserId: string) {
             }
         });
 
+        // Treat an existing link as success: the caller's intent ("this person
+        // should be in my network") is already satisfied, and the auto-connect
+        // path can fire twice on a refresh. Failing here would show an error for
+        // an outcome the user actually wanted.
         if (existing) {
-            return { success: false, error: "Already connected." };
+            return { success: true, alreadyConnected: true };
         }
 
-        // 5. Create the connection (Using 'targetId')
+        // 4. Create the connection (Using 'targetId')
         await prisma.connection.create({
             data: {
                 userId: currentUserId,
@@ -81,9 +80,10 @@ export async function connectUser(targetUserId: string) {
             }
         });
 
-        return { success: true };
+        revalidatePath('/dashboard/connect');
+        return { success: true, alreadyConnected: false };
     } catch (error) {
-        console.error("Connect Error:", error);
-        return { success: false, error: "Database error" };
+        console.error("[connectUser]", error);
+        return { success: false, error: "Could not add this person to your network. Please try again." };
     }
 }

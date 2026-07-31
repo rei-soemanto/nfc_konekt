@@ -56,8 +56,9 @@ export default async function TeamWriterPage() {
         }))
     ].filter(m => m.slug !== ''); // Filter out users with no cards to prevent errors
 
+    // No px-* on the wrapper: the dashboard shell already applies p-4 md:p-8.
     return (
-        <div className="max-w-xl mx-auto py-8 px-4">
+        <div className="max-w-xl mx-auto py-8">
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
                     <i className="fa-solid fa-pen-to-square text-indigo-600 mr-3"></i>

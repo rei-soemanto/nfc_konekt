@@ -50,15 +50,20 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
 
     const isOwner = viewerId === targetUser.id;
 
+    // Back link only for signed-in viewers. Anonymous visitors previously got a
+    // link straight into /dashboard/connect, a protected route, which middleware
+    // just bounced back to /auth — a dead end.
+    const backLink = viewerId ? "/dashboard" : null;
+
     // 4. Render the Client Component
     return (
-        <PublicProfile 
+        <PublicProfile
             user={userForClient}
             slug={slug}
             isOwner={isOwner}
             initialIsFriend={isConnected}
             viewerId={viewerId}
-            backLink={isOwner ? "/dashboard" : "/dashboard/connect"} // Smart back link
+            backLink={backLink}
         />
     )
 }

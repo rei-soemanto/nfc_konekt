@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { generateVCard } from '@/lib/vcard'
 import { logScan, connectUser } from '@/actions/scan'
 import Link from 'next/link'
+import { CONNECT_PARAM, authUrlFor } from '@/lib/session-config'
 
 type UserProfile = {
     id: string
@@ -30,10 +32,14 @@ export default function PublicProfile({
     isOwner: boolean,
     initialIsFriend: boolean,
     viewerId: string | null,
-    backLink: string 
+    backLink: string | null
 }) {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
     const [isFriend, setIsFriend] = useState(initialIsFriend);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         // Only log scan if it's not the owner viewing their own card
@@ -54,23 +60,46 @@ export default function PublicProfile({
         document.body.removeChild(link);
     };
 
-    const handleConnect = async () => {
-        if (!viewerId) {
-            // Redirect to login if not authenticated, return to this profile after
-            window.location.href = `/auth?redirect=/p/${slug}`;
-            return;
-        }
-
+    const runConnect = useCallback(async () => {
         setLoading(true);
+        setError(null);
+
         const result = await connectUser(user.id);
-        setLoading(false);
 
         if (result.success) {
             setIsFriend(true);
-        } else {
-            alert(result.error);
+            // Land the user in their own network rather than leaving them
+            // stranded on someone else's card with nothing to do next.
+            router.push('/dashboard/connect');
+            return;
         }
+
+        setLoading(false);
+        setError(result.error ?? `Could not add ${user.fullName} to your network. Please try again.`);
+    }, [user.id, user.fullName, router]);
+
+    const handleConnect = () => {
+        if (!viewerId) {
+            // Not signed in (or the session expired — indistinguishable here).
+            // Send them to /auth with a return target and a connect intent so
+            // they come straight back and the connection completes itself.
+            window.location.href = authUrlFor(`/p/${slug}`, true);
+            return;
+        }
+        void runConnect();
     };
+
+    // Auto-connect on arrival from ?connect=1 (set by the sign-in round trip).
+    // The ref guards against React 18 StrictMode double-invoking the effect.
+    const autoConnectFired = useRef(false);
+    useEffect(() => {
+        if (autoConnectFired.current) return;
+        if (searchParams.get(CONNECT_PARAM) !== '1') return;
+        if (!viewerId || isOwner || isFriend) return;
+
+        autoConnectFired.current = true;
+        void runConnect();
+    }, [searchParams, viewerId, isOwner, isFriend, runConnect]);
 
     // Helper to format URL for display (removes https:// and trailing slash)
     const formatUrl = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -78,14 +107,19 @@ export default function PublicProfile({
     return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 relative">
 
-            {/* --- BACK BUTTON (Positioned Absolute to Screen) --- */}
-            <Link 
-                href={backLink} 
-                className="absolute top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full text-white/80 hover:text-white transition-all border border-white/10 group shadow-lg"
-            >
-                <i className="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
-                <span className="text-sm font-medium">Back</span>
-            </Link>
+            {/* --- BACK BUTTON (Positioned Absolute to Screen) ---
+                Rendered only for signed-in viewers. Anonymous visitors have no
+                dashboard to go back to, and linking them into a protected route
+                just bounced them to /auth. */}
+            {backLink && (
+                <Link
+                    href={backLink}
+                    className="absolute top-4 left-4 sm:top-6 sm:left-6 z-50 flex items-center gap-2 px-3 py-2 sm:px-4 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full text-white/80 hover:text-white transition-all border border-white/10 group shadow-lg"
+                >
+                    <i className="fa-solid fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
+                    <span className="text-sm font-medium">Back to my dashboard</span>
+                </Link>
+            )}
 
             <div className="w-full max-w-lg bg-gray-800 rounded-3xl overflow-hidden shadow-2xl border border-gray-700 relative mt-12 md:mt-0">
                 
@@ -110,7 +144,7 @@ export default function PublicProfile({
                     </div>
                 </div>
 
-                <div className="pt-32 pb-8 px-8 text-center">
+                <div className="pt-32 pb-8 px-5 sm:px-8 text-center">
                     {/* Name */}
                     <h1 className="text-2xl font-bold text-white mb-2">{user.fullName}</h1>
                     
@@ -128,20 +162,20 @@ export default function PublicProfile({
                                 href={user.companyWebsite.startsWith('http') ? user.companyWebsite : `https://${user.companyWebsite}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
-                                className="text-gray-400 hover:text-indigo-300 text-sm transition-colors flex items-center"
+                                className="text-gray-400 hover:text-indigo-300 text-sm transition-colors flex min-w-0 max-w-full items-center"
                             >
-                                <i className="fa-solid fa-link text-xs mr-2"></i>
-                                {formatUrl(user.companyWebsite)}
+                                <i className="fa-solid fa-link text-xs mr-2 shrink-0"></i>
+                                <span className="truncate">{formatUrl(user.companyWebsite)}</span>
                             </a>
                         )}
                     </div>
 
                     {/* Email Pill */}
                     {user.email && (
-                        <div className="mb-6 flex justify-center">
-                            <a href={`mailto:${user.email}`} className="flex items-center px-4 py-1.5 bg-gray-700/50 hover:bg-gray-700 rounded-full text-sm text-gray-300 hover:text-white transition-all border border-gray-600 hover:border-gray-500">
-                                <i className="fa-regular fa-envelope mr-2"></i>
-                                {user.email}
+                        <div className="mb-6 flex min-w-0 justify-center">
+                            <a href={`mailto:${user.email}`} className="flex min-w-0 max-w-full items-center px-4 py-1.5 bg-gray-700/50 hover:bg-gray-700 rounded-full text-sm text-gray-300 hover:text-white transition-all border border-gray-600 hover:border-gray-500">
+                                <i className="fa-regular fa-envelope mr-2 shrink-0"></i>
+                                <span className="truncate">{user.email}</span>
                             </a>
                         </div>
                     )}
@@ -156,38 +190,59 @@ export default function PublicProfile({
                         </div>
                     )}
 
-                    {/* Action Buttons */}
-                    <div className="grid grid-cols-2 gap-4 mb-8">
-                        <button 
+                    {/* Action Buttons — stack on the narrowest screens so neither
+                        label is squeezed; side by side from 400px up. */}
+                    <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3 sm:gap-4 mb-8">
+                        <button
                             onClick={handleDownloadVCard}
                             className="bg-white text-gray-900 py-3 rounded-xl font-bold text-sm hover:bg-gray-100 transition-colors shadow-lg flex items-center justify-center"
                         >
                             <i className="fa-solid fa-address-book mr-2"></i>
                             Save Contact
                         </button>
-                        
-                        <button 
+
+                        <button
                             onClick={handleConnect}
                             disabled={isFriend || isOwner || loading}
                             className={`py-3 rounded-xl font-bold text-sm transition-colors shadow-lg flex items-center justify-center ${
-                                isOwner 
-                                    ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50' 
-                                    : isFriend 
-                                        ? 'bg-green-600 text-white cursor-default' 
+                                isOwner
+                                    ? 'bg-gray-700 text-gray-500 cursor-not-allowed opacity-50'
+                                    : isFriend
+                                        ? 'bg-green-600 text-white cursor-default'
                                         : 'bg-indigo-600 text-white hover:bg-indigo-700'
                             }`}
                         >
                             {loading ? (
                                 <i className="fa-solid fa-circle-notch fa-spin"></i>
                             ) : isOwner ? (
-                                <><i className="fa-solid fa-user mr-2"></i> It's You</>
+                                <><i className="fa-solid fa-user mr-2"></i> It&apos;s You</>
                             ) : isFriend ? (
                                 <><i className="fa-solid fa-check mr-2"></i> Connected</>
-                            ) : (
+                            ) : viewerId ? (
                                 <><i className="fa-solid fa-user-plus mr-2"></i> Connect</>
+                            ) : (
+                                // Covers both "never signed in" and "session expired" —
+                                // getAuthUserId cannot tell those apart, and the action
+                                // the user needs is the same either way.
+                                <><i className="fa-solid fa-right-to-bracket mr-2"></i> Sign in to connect</>
                             )}
                         </button>
                     </div>
+
+                    {error && (
+                        <p role="alert" className="-mt-4 mb-8 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-left text-sm text-red-300">
+                            <i className="fa-solid fa-circle-exclamation mt-0.5 shrink-0"></i>
+                            <span>{error}</span>
+                        </p>
+                    )}
+
+                    {isFriend && !isOwner && (
+                        <p className="-mt-4 mb-8 text-sm text-gray-400">
+                            <Link href="/dashboard/connect" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">
+                                View in my connections
+                            </Link>
+                        </p>
+                    )}
 
                     {/* Social Links */}
                     <div className="space-y-3">
