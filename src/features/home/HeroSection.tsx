@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 export function HeroSection() {
     return (
@@ -21,9 +22,19 @@ export function HeroSection() {
                         </Link>
                     </div>
                 </div>
-                {/* Hero Image Placeholder */}
-                <div className="relative h-[500px] w-full bg-gray-200 dark:bg-gray-800 rounded-2xl shadow-2xl animate-pulse flex items-center justify-center">
-                    <span className="text-gray-400 dark:text-gray-500 text-xl font-bold">Hero Image</span>
+                {/* Hero Image — aspect-square matches the source's 1:1 ratio, so
+                    object-cover never actually crops it. A fixed height would. */}
+                <div className="relative w-full aspect-square rounded-2xl shadow-2xl overflow-hidden">
+                    <Image
+                        src="/hero-image.png"
+                        alt="A professional holding a phone showing an NFC Konekt digital business card, next to a physical NFC card"
+                        fill
+                        // Above the fold and almost certainly the LCP element, so
+                        // preload it rather than letting it lazy-load.
+                        priority
+                        sizes="(min-width: 1280px) 608px, (min-width: 768px) 50vw, 100vw"
+                        className="object-cover"
+                    />
                 </div>
             </div>
         </section>

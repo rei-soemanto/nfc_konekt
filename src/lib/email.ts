@@ -297,7 +297,7 @@ export async function sendInvitationEmail(params: {
                             <td style="padding: 40px 30px;">
                                 <h2 style="color: #1f2937; margin: 0 0 8px; font-size: 22px;">You're invited to NFC Konekt</h2>
                                 <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">
-                                    ${safeInviter} has invited you to join <strong>NFC Konekt</strong> &mdash; a smart digital business card you share by tapping your phone. Create your profile once, then share it instantly with anyone you meet.
+                                    Join <strong>NFC Konekt</strong> &mdash; a smart digital business card you share by tapping your phone. Create your profile once, then share it instantly with anyone you meet.
                                 </p>
 
                                 <!-- What you get -->
