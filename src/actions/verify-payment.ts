@@ -173,7 +173,8 @@ export async function processSuccessfulPayment(orderId: string) {
                     password: randomPassword,
                     adminName: tx.user.fullName,
                     companyName: tx.user.companyName ?? null,
-                    loginUrl: `${process.env.NEXT_PUBLIC_APP_URL}/auth/login`,
+                    // The auth page lives at /auth — /auth/login is a 404.
+                    loginUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/auth`,
                     subscriptionEndDate: calculateEndDate(tx.plan!.duration),
                     planDuration: tx.plan!.duration,
                 });
