@@ -5,8 +5,10 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { AuthService } from '@/services/AuthService' // Import the new Service
 import {
+    CONNECT_PARAM,
     DEFAULT_POST_LOGIN,
     NEXT_COOKIE,
+    NEXT_COOKIE_MAX_AGE,
     NEXT_PARAM,
     SESSION_JWT_EXPIRY,
     SESSION_MAX_AGE,
@@ -110,10 +112,35 @@ export async function signup(prevState: AuthState, formData: FormData): Promise<
             companyName
         })
 
+        // Remember where to send them once they have verified and logged in.
+        //
+        // This write lives here, not on the /auth page, because Next.js only
+        // permits cookie mutation in phase 'action' — doing it during a page
+        // render throws ReadonlyRequestCookiesError and returns a 500.
+        //
+        // A signup cannot log in until the inbox round trip completes, which
+        // loses the query string, so the hidden form field alone is not enough
+        // for this path. `login()` reads this cookie and then clears it.
+        const next = safeNext(formData.get(NEXT_PARAM))
+        if (next !== DEFAULT_POST_LOGIN) {
+            const wantsConnect = formData.get(CONNECT_PARAM) === '1'
+            const separator = next.includes('?') ? '&' : '?'
+            const target = wantsConnect ? `${next}${separator}${CONNECT_PARAM}=1` : next
+
+            const cookieStore = await cookies()
+            cookieStore.set(NEXT_COOKIE, target, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                maxAge: NEXT_COOKIE_MAX_AGE,
+            })
+        }
+
         // No auto-login — return success message instead
-        return { 
+        return {
             success: true,
-            message: "Account verification email sent, check your email to activate your account" 
+            message: "Account verification email sent, check your email to activate your account"
         }
 
     } catch (error: any) {

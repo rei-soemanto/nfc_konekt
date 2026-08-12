@@ -4,10 +4,10 @@ import { useActionState, useState } from 'react'
 import { login, signup } from '@/actions/auth'
 import { Input } from '@/components/ui/Input'
 import { SubmitButton } from '@/components/ui/Button'
-import { DEFAULT_POST_LOGIN, NEXT_PARAM } from '@/lib/session-config'
+import { CONNECT_PARAM, DEFAULT_POST_LOGIN, NEXT_PARAM } from '@/lib/session-config'
 
 // --- 1. Sub-Component: Sign Up Form ---
-function SignUpForm({ isActive, next }: { isActive: boolean; next?: string }) {
+function SignUpForm({ isActive, next, connectAfter }: { isActive: boolean; next?: string; connectAfter?: boolean }) {
     const [state, action] = useActionState(signup, undefined)
 
     return (
@@ -25,10 +25,12 @@ function SignUpForm({ isActive, next }: { isActive: boolean; next?: string }) {
         `}>
             <form action={action} className="bg-white dark:bg-gray-900 flex flex-col items-center justify-center w-full h-full px-10 text-center transition-colors duration-300">
                 <h1 className="text-2xl md:text-3xl font-bold mb-4 text-gray-800 dark:text-white">Create Account</h1>
-                {/* Signup cannot log in until the email is verified, so this field
-                    is belt-and-braces — the post_auth_next cookie set by the /auth
-                    page is what actually survives that round trip. */}
+                {/* signup() reads these two and writes the post_auth_next cookie,
+                    which is what survives the inbox round trip. The cookie cannot
+                    be written by the /auth page itself — Next.js forbids cookie
+                    mutation during a render. */}
                 {next && <input type="hidden" name={NEXT_PARAM} value={next} />}
+                {connectAfter && <input type="hidden" name={CONNECT_PARAM} value="1" />}
 
                 <div className="w-full space-y-3 text-left overflow-y-auto max-h-[80%] md:max-h-none py-2 px-1 custom-scrollbar">
                     {/* Success Message (Verification Email Sent) */}
@@ -197,11 +199,10 @@ type AuthCardProps = {
 }
 
 export default function AuthCard({ next, connectAfter = false }: AuthCardProps) {
-    const [isSignupMode, setIsSignupMode] = useState(false)
-
-    // Start on the sign-up panel when the visitor was sent here to create an
-    // account before connecting — saves them a click.
-    const [hasReturnTarget] = useState(Boolean(next && next !== DEFAULT_POST_LOGIN))
+    // A visitor sent here from a scanned card almost certainly has no account,
+    // so open the Create Account panel. They can still switch to Sign In.
+    const hasReturnTarget = Boolean(next && next !== DEFAULT_POST_LOGIN)
+    const [isSignupMode, setIsSignupMode] = useState(hasReturnTarget)
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-950 px-4 py-8 transition-colors duration-300">
@@ -213,7 +214,7 @@ export default function AuthCard({ next, connectAfter = false }: AuthCardProps) 
                             : 'Sign in to continue where you left off.'}
                     </p>
                 )}
-                <SignUpForm isActive={isSignupMode} next={next} />
+                <SignUpForm isActive={isSignupMode} next={next} connectAfter={connectAfter} />
                 <SignInForm isActive={isSignupMode} next={next} />
                 <Overlay isSignupMode={isSignupMode} onToggle={() => setIsSignupMode(!isSignupMode)} />
             </div>

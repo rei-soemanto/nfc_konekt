@@ -10,7 +10,8 @@ import { CONNECT_PARAM, authUrlFor } from '@/lib/session-config'
 type UserProfile = {
     id: string
     fullName: string
-    email: string 
+    email: string
+    phone: string | null
     companyName: string | null
     companyWebsite: string | null
     bio: string | null
@@ -170,13 +171,23 @@ export default function PublicProfile({
                         )}
                     </div>
 
-                    {/* Email Pill */}
-                    {user.email && (
-                        <div className="mb-6 flex min-w-0 justify-center">
-                            <a href={`mailto:${user.email}`} className="flex min-w-0 max-w-full items-center px-4 py-1.5 bg-gray-700/50 hover:bg-gray-700 rounded-full text-sm text-gray-300 hover:text-white transition-all border border-gray-600 hover:border-gray-500">
-                                <i className="fa-regular fa-envelope mr-2 shrink-0"></i>
-                                <span className="truncate">{user.email}</span>
-                            </a>
+                    {/* Contact pills — wrap so two pills never overflow a 375px card */}
+                    {(user.email || user.phone) && (
+                        <div className="mb-6 flex min-w-0 flex-wrap items-center justify-center gap-2">
+                            {user.email && (
+                                <a href={`mailto:${user.email}`} className="flex min-w-0 max-w-full items-center px-4 py-1.5 bg-gray-700/50 hover:bg-gray-700 rounded-full text-sm text-gray-300 hover:text-white transition-all border border-gray-600 hover:border-gray-500">
+                                    <i className="fa-regular fa-envelope mr-2 shrink-0"></i>
+                                    <span className="truncate">{user.email}</span>
+                                </a>
+                            )}
+                            {user.phone && (
+                                // tel: makes this tap-to-call on a phone, which is
+                                // where a scanned card is almost always opened.
+                                <a href={`tel:${user.phone}`} className="flex min-w-0 max-w-full items-center px-4 py-1.5 bg-gray-700/50 hover:bg-gray-700 rounded-full text-sm text-gray-300 hover:text-white transition-all border border-gray-600 hover:border-gray-500">
+                                    <i className="fa-solid fa-phone mr-2 shrink-0"></i>
+                                    <span className="truncate">{user.phone}</span>
+                                </a>
+                            )}
                         </div>
                     )}
                     

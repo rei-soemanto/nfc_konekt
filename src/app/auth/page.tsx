@@ -1,13 +1,5 @@
-import { cookies } from 'next/headers'
 import AuthCard from '@/features/auth/AuthCard'
-import {
-    CONNECT_PARAM,
-    DEFAULT_POST_LOGIN,
-    NEXT_COOKIE,
-    NEXT_COOKIE_MAX_AGE,
-    NEXT_PARAM,
-    safeNext,
-} from '@/lib/session-config'
+import { CONNECT_PARAM, NEXT_PARAM, safeNext } from '@/lib/session-config'
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>
 
@@ -15,29 +7,25 @@ function first(value: string | string[] | undefined): string | undefined {
     return Array.isArray(value) ? value[0] : value
 }
 
+/**
+ * Read-only by design.
+ *
+ * This page must NOT mutate cookies. Next.js only allows that when the request
+ * phase is 'action' (Server Actions and Route Handlers); during a page render
+ * `cookies()` returns a sealed read-only jar and `.set()` throws
+ * ReadonlyRequestCookiesError — "Cookies can only be modified in a Server
+ * Action or Route Handler" — which surfaces as a 500.
+ *
+ * The `post_auth_next` cookie that carries the return target across the
+ * sign-up -> inbox -> log-in round trip is therefore written by `signup()` in
+ * `src/actions/auth.ts` instead. Plain logins need no cookie at all: the value
+ * travels in a hidden form field.
+ */
 export default async function AuthPage({ searchParams }: { searchParams: SearchParams }) {
     const params = await searchParams
 
     const next = safeNext(first(params[NEXT_PARAM]))
     const wantsConnect = first(params[CONNECT_PARAM]) === '1'
-
-    // Persist the return target. A sign-up cannot log in until the user has been
-    // to their inbox and back, and the original query string does not survive
-    // that round trip — the hidden form field covers plain logins, this cookie
-    // covers register -> verify -> log in on the same device.
-    if (next !== DEFAULT_POST_LOGIN) {
-        const separator = next.includes('?') ? '&' : '?'
-        const target = wantsConnect ? `${next}${separator}${CONNECT_PARAM}=1` : next
-
-        const cookieStore = await cookies()
-        cookieStore.set(NEXT_COOKIE, target, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            maxAge: NEXT_COOKIE_MAX_AGE,
-        })
-    }
 
     return <AuthCard next={next} connectAfter={wantsConnect} />
 }

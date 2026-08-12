@@ -38,6 +38,10 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         id: targetUser.id,
         fullName: targetUser.fullName,
         email: targetUser.email,
+        // Needed for the TEL line in the downloaded vCard and the tap-to-call
+        // link on the card. It was fetched but dropped here, so "Save Contact"
+        // produced a contact with no number.
+        phone: targetUser.phone,
         companyName: targetUser.companyName,
         companyWebsite: targetUser.companyWebsite,
         bio: targetUser.bio,
