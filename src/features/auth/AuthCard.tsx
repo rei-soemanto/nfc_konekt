@@ -7,7 +7,7 @@ import { SubmitButton } from '@/components/ui/Button'
 import { CONNECT_PARAM, DEFAULT_POST_LOGIN, NEXT_PARAM } from '@/lib/session-config'
 
 // --- 1. Sub-Component: Sign Up Form ---
-function SignUpForm({ isActive, next, connectAfter }: { isActive: boolean; next?: string; connectAfter?: boolean }) {
+function SignUpForm({ isActive, next, connectAfter, invitedEmail }: { isActive: boolean; next?: string; connectAfter?: boolean; invitedEmail?: string }) {
     const [state, action] = useActionState(signup, undefined)
 
     return (
@@ -49,7 +49,9 @@ function SignUpForm({ isActive, next, connectAfter }: { isActive: boolean; next?
                     )}
                     
                     <Input name="fullName" label="Name" placeholder="John Doe" error={state?.errors?.fullName} />
-                    <Input name="email" label="Email" type="email" placeholder="john@example.com" error={state?.errors?.email} />
+                    {/* Prefilled from an admin invitation, but still editable —
+                        the address is not enforced server-side. */}
+                    <Input name="email" label="Email" type="email" placeholder="john@example.com" defaultValue={invitedEmail} error={state?.errors?.email} />
                     <Input name="password" label="Password" type="password" placeholder="••••••••" error={state?.errors?.password} />
                     <Input name="companyName" label="Company" placeholder="Acme Inc" error={state?.errors?.companyName} />
                     
@@ -196,25 +198,31 @@ type AuthCardProps = {
     next?: string
     /** Whether the return target should also trigger a connect on arrival. */
     connectAfter?: boolean
+    /** Address an admin invitation was sent to — prefills the sign-up form. */
+    invitedEmail?: string
 }
 
-export default function AuthCard({ next, connectAfter = false }: AuthCardProps) {
-    // A visitor sent here from a scanned card almost certainly has no account,
-    // so open the Create Account panel. They can still switch to Sign In.
+export default function AuthCard({ next, connectAfter = false, invitedEmail }: AuthCardProps) {
+    // A visitor sent here from a scanned card or an invitation almost certainly
+    // has no account, so open the Create Account panel. They can still switch.
     const hasReturnTarget = Boolean(next && next !== DEFAULT_POST_LOGIN)
-    const [isSignupMode, setIsSignupMode] = useState(hasReturnTarget)
+    const [isSignupMode, setIsSignupMode] = useState(hasReturnTarget || Boolean(invitedEmail))
+
+    const banner = invitedEmail
+        ? 'You’ve been invited to NFC Konekt — create your account to get started.'
+        : connectAfter
+            ? 'Sign in to connect — we’ll take you straight back.'
+            : 'Sign in to continue where you left off.'
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-950 px-4 py-8 transition-colors duration-300">
             <div className="relative overflow-hidden w-full max-w-[850px] h-[600px] md:min-h-[550px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl dark:shadow-indigo-900/20">
-                {hasReturnTarget && (
+                {(hasReturnTarget || invitedEmail) && (
                     <p className="absolute inset-x-0 top-0 z-60 bg-indigo-600 px-4 py-2 text-center text-xs font-medium text-white">
-                        {connectAfter
-                            ? 'Sign in to connect — we’ll take you straight back.'
-                            : 'Sign in to continue where you left off.'}
+                        {banner}
                     </p>
                 )}
-                <SignUpForm isActive={isSignupMode} next={next} connectAfter={connectAfter} />
+                <SignUpForm isActive={isSignupMode} next={next} connectAfter={connectAfter} invitedEmail={invitedEmail} />
                 <SignInForm isActive={isSignupMode} next={next} />
                 <Overlay isSignupMode={isSignupMode} onToggle={() => setIsSignupMode(!isSignupMode)} />
             </div>

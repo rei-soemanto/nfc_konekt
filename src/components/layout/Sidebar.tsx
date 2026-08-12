@@ -85,6 +85,7 @@ export function Sidebar({ user, newTxCount = 0 }: { user: UserProps, newTxCount?
             { name: 'NFC Writer', href: '/dashboard/admin/writer', icon: 'fa-wand-magic-sparkles' },
             { name: 'Manage Plans', href: '/dashboard/admin/plans', icon: 'fa-list-check' },
             { name: 'Promo Codes', href: '/dashboard/admin/promos', icon: 'fa-tags' },
+            { name: 'Invitations', href: '/dashboard/admin/invites', icon: 'fa-envelope-open-text' },
             { name: 'Manage Users', href: '/dashboard/admin/users', icon: 'fa-users' },
             { name: 'Transactions', href: '/dashboard/admin/transactions', icon: 'fa-handshake', badge: newTxCount }
         )

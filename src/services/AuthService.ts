@@ -68,10 +68,24 @@ export class AuthService {
             }
         });
 
-        // 6. Send verification email
+        // 6. Close out any admin invitation for this address.
+        //    Matched on email rather than the invite token so it still works if
+        //    the recipient signed up without following the emailed link.
+        //    Non-fatal: the account exists either way, and losing a conversion
+        //    stat must never fail a registration.
+        try {
+            await prisma.invitation.updateMany({
+                where: { email: data.email.toLowerCase(), status: 'PENDING' },
+                data: { status: 'ACCEPTED', acceptedAt: new Date() },
+            });
+        } catch (error) {
+            console.error(`[registerUser] could not mark the invitation for ${data.email} as accepted`, error);
+        }
+
+        // 7. Send verification email
         await sendVerificationEmail(data.email, token);
 
-        // 7. Return user without password
+        // 8. Return user without password
         const { password, ...userWithoutPassword } = newUser;
         return userWithoutPassword;
     }

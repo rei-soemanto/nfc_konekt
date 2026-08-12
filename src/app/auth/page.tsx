@@ -1,4 +1,5 @@
 import AuthCard from '@/features/auth/AuthCard'
+import { prisma } from '@/lib/prisma'
 import { CONNECT_PARAM, NEXT_PARAM, safeNext } from '@/lib/session-config'
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>
@@ -27,5 +28,24 @@ export default async function AuthPage({ searchParams }: { searchParams: SearchP
     const next = safeNext(first(params[NEXT_PARAM]))
     const wantsConnect = first(params[CONNECT_PARAM]) === '1'
 
-    return <AuthCard next={next} connectAfter={wantsConnect} />
+    // Admin invitation link: prefill the address it was sent to and open the
+    // Sign Up panel. A DB READ only — see the cookie warning above.
+    const inviteToken = first(params.invite)
+    let invitedEmail: string | undefined
+
+    if (inviteToken) {
+        const invitation = await prisma.invitation.findUnique({
+            where: { token: inviteToken },
+            select: { email: true, status: true, expiresAt: true },
+        })
+
+        // Only prefill for an invitation that is still open. An accepted or
+        // expired one silently falls back to a normal signup rather than
+        // telling a stranger whether the token is real.
+        if (invitation && invitation.status === 'PENDING' && invitation.expiresAt > new Date()) {
+            invitedEmail = invitation.email
+        }
+    }
+
+    return <AuthCard next={next} connectAfter={wantsConnect} invitedEmail={invitedEmail} />
 }

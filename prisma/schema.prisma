@@ -17,7 +17,7 @@ enum Role {
 }
 
 enum PlanCategory {
-  PERSONAL  
+  PERSONAL
   CORPORATE
 }
 
@@ -58,10 +58,10 @@ enum FriendStatus {
 }
 
 enum ShipmentStatus {
-  PENDING       // Waiting for payment
-  PROCESSING    // Payment received, preparing card
-  SHIPPING      // Sent to courier
-  ARRIVED       // Delivered
+  PENDING // Waiting for payment
+  PROCESSING // Payment received, preparing card
+  SHIPPING // Sent to courier
+  ARRIVED // Delivered
 }
 
 enum DiscountType {
@@ -69,85 +69,93 @@ enum DiscountType {
   FIXED
 }
 
+enum InvitationStatus {
+  PENDING // Email sent, recipient has not registered yet
+  ACCEPTED // Recipient registered with this email
+  EXPIRED // Passed expiresAt without being accepted
+}
+
 // --- MODELS ---
 
 model User {
-  id             String    @id @default(cuid())
+  id             String  @id @default(cuid())
   fullName       String
-  email          String    @unique
+  email          String  @unique
   phone          String?
   password       String
   companyName    String?
   companyWebsite String?
-  avatarUrl      String?   @db.Text
-  bio            String?   @db.Text
-  
-  role           Role        @default(USER)
-  accountStatus  UserStatus  @default(ACTIVE)
-  emailVerified  Boolean     @default(false)
+  avatarUrl      String? @db.Text
+  bio            String? @db.Text
 
-  address        Address?
+  role          Role       @default(USER)
+  accountStatus UserStatus @default(ACTIVE)
+  emailVerified Boolean    @default(false)
+
+  address Address?
 
   // TEAM / GROUP RELATIONS
-  parentId       String?
-  parent         User?       @relation("TeamMembers", fields: [parentId], references: [id], onDelete: NoAction)
-  members        User[]      @relation("TeamMembers")
+  parentId String?
+  parent   User?   @relation("TeamMembers", fields: [parentId], references: [id], onDelete: NoAction)
+  members  User[]  @relation("TeamMembers")
 
   // Relations
-  socialLinks    SocialLink[]
-  cards          Card[]      @relation("OwnedCards")
-  scansMade      Scan[]      @relation("ScansMade")
-  subscription   Subscription?
+  socialLinks  SocialLink[]
+  cards        Card[]        @relation("OwnedCards")
+  scansMade    Scan[]        @relation("ScansMade")
+  subscription Subscription?
 
   // NEW: Company / Corporate Profile Fields
-  companyScope       String?  // e.g., "Tech", "Logistics"
-  companySpeciality  String?  // e.g., "Web Dev", "Supply Chain"
-  companyDescription String?  @db.Text
-  companyLogoUrl     String?  @db.LongText
-  
+  companyScope       String? // e.g., "Tech", "Logistics"
+  companySpeciality  String? // e.g., "Web Dev", "Supply Chain"
+  companyDescription String? @db.Text
+  companyLogoUrl     String? @db.LongText
+
   // NEW: Employee / Individual Role Fields
-  jobTitle           String?  // The "Role on the company"
-  isCompanyPublic    Boolean  @default(true) // Admin can toggle this to hide user from public corporate profile
+  jobTitle        String? // The "Role on the company"
+  isCompanyPublic Boolean @default(true) // Admin can toggle this to hide user from public corporate profile
 
   // Relations
-  connections        Connection[] @relation("UserConnections")
-  connectedBy        Connection[] @relation("ConnectedBy")
+  connections Connection[] @relation("UserConnections")
+  connectedBy Connection[] @relation("ConnectedBy")
 
-  tempSetupData  String?   @db.Text
-  tempDesignData  String?  @db.LongText
+  tempSetupData  String? @db.Text
+  tempDesignData String? @db.LongText
 
-  transactions   Transaction[]
+  transactions       Transaction[]
   verificationTokens VerificationToken[]
 
   contacts Contact[]
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  sentInvitations Invitation[] @relation("SentInvitations")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Address {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  country     String
-  region      String   // State/Province
-  city        String
-  street      String
-  postalCode  String
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  country    String
+  region     String // State/Province
+  city       String
+  street     String
+  postalCode String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Connection {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation("UserConnections", fields: [userId], references: [id], onDelete: Cascade)
-  
-  targetId  String
-  target    User     @relation("ConnectedBy", fields: [targetId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("UserConnections", fields: [userId], references: [id], onDelete: Cascade)
+
+  targetId String
+  target   User   @relation("ConnectedBy", fields: [targetId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
 
   @@unique([userId, targetId])
@@ -155,169 +163,169 @@ model Connection {
 }
 
 model Plan {
-  id            String        @id @default(cuid())
-  category      PlanCategory
-  duration      PlanDuration
-  price         Int           @default(0)
+  id       String       @id @default(cuid())
+  category PlanCategory
+  duration PlanDuration
+  price    Int          @default(0)
 
-  name          String        
+  name String
 
-  expansionPrice Int          @default(0)
-  
+  expansionPrice Int @default(0)
+
   subscriptions Subscription[]
-  transactions Transaction[]
+  transactions  Transaction[]
 
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([category, duration])
 }
 
 model SocialLink {
-  id           String   @id @default(cuid())
-  platform     String
-  url          String
-  
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  platform String
+  url      String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Card {
-  id             String      @id @default(cuid())
-  slug           String      @unique
-  hardwareSerial String?     @unique
-  
-  status         CardStatus  @default(INACTIVE)
-  
-  userId         String
-  user           User        @relation("OwnedCards", fields: [userId], references: [id], onDelete: Cascade)
-  
-  scansReceived  Scan[]
-  
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id             String  @id @default(cuid())
+  slug           String  @unique
+  hardwareSerial String? @unique
+
+  status CardStatus @default(INACTIVE)
+
+  userId String
+  user   User   @relation("OwnedCards", fields: [userId], references: [id], onDelete: Cascade)
+
+  scansReceived Scan[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Scan {
-  id         String   @id @default(cuid())
-  
-  scannerId  String
-  scanner    User     @relation("ScansMade", fields: [scannerId], references: [id], onDelete: Cascade)
-  
-  cardId     String
-  card       Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
-  
-  scannedAt  DateTime @default(now())
+  id String @id @default(cuid())
+
+  scannerId String
+  scanner   User   @relation("ScansMade", fields: [scannerId], references: [id], onDelete: Cascade)
+
+  cardId String
+  card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  scannedAt DateTime @default(now())
 
   @@index([scannerId])
   @@index([cardId])
 }
 
 model Subscription {
-  id             String             @id @default(cuid())
-  
-  userId         String             @unique
-  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id String @id @default(cuid())
 
-  status         SubscriptionStatus @default(ACTIVE)
-  
-  planId         String
-  plan           Plan               @relation(fields: [planId], references: [id])
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  expansionPacks Int                @default(0)
+  status SubscriptionStatus @default(ACTIVE)
 
-  startDate      DateTime           @default(now())
-  endDate        DateTime
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id])
 
-  paymentId      String?            @unique
-  snapToken      String? 
+  expansionPacks Int @default(0)
 
-  shipmentStatus  ShipmentStatus    @default(PENDING)
-  shippingAddress String?           @db.Text
+  startDate DateTime @default(now())
+  endDate   DateTime
 
-  trackingLink    String?
-  isNew           Boolean           @default(true)
+  paymentId String? @unique
+  snapToken String?
 
-  pendingTeamData String?           @db.Text
-  
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  shipmentStatus  ShipmentStatus @default(PENDING)
+  shippingAddress String?        @db.Text
+
+  trackingLink String?
+  isNew        Boolean @default(true)
+
+  pendingTeamData String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Transaction {
-  id              String   @id @default(cuid())
-  
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  planId          String?
-  plan            Plan?    @relation(fields: [planId], references: [id])
-  
-  type            String   // 'NEW', 'EXPANSION', 'RENEWAL'
-  status          String   // 'PENDING', 'PAID', 'EXPIRED', 'FAILED'
-  
-  amount          Float
-  paymentId       String   @unique // Midtrans Order ID
-  snapToken       String?
-  
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  planId String?
+  plan   Plan?   @relation(fields: [planId], references: [id])
+
+  type   String // 'NEW', 'EXPANSION', 'RENEWAL'
+  status String // 'PENDING', 'PAID', 'EXPIRED', 'FAILED'
+
+  amount    Float
+  paymentId String  @unique // Midtrans Order ID
+  snapToken String?
+
   // Shipment & Fulfillment Data (Snapshot)
-  shippingAddress String?  @db.Text
-  shipmentStatus  String   @default("PENDING") // 'PENDING' (Unpaid), 'PROCESSING', 'SHIPPING', 'ARRIVED'
+  shippingAddress String? @db.Text
+  shipmentStatus  String  @default("PENDING") // 'PENDING' (Unpaid), 'PROCESSING', 'SHIPPING', 'ARRIVED'
   trackingLink    String?
-  
+
   // Content Data
-  expansionPacks  Int      @default(0)
-  pendingTeamData String?  @db.Text // The list of users to create upon success of THIS specific transaction
-  cardDesign      String?  @db.LongText
-  
-  isNew           Boolean  @default(true) // For Admin Notification
+  expansionPacks  Int     @default(0)
+  pendingTeamData String? @db.Text // The list of users to create upon success of THIS specific transaction
+  cardDesign      String? @db.LongText
+
+  isNew Boolean @default(true) // For Admin Notification
 
   promoCodeId     String?
-  discountApplied Float        @default(0)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  discountApplied Float   @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Contact {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  name        String
-  email       String?
-  company     String?
-  website     String?
-  phone       String?  // Good to have for business cards
-  jobTitle    String?  // Good to have
-  
-  notes       String?  @db.Text
-  createdAt   DateTime @default(now())
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name     String
+  email    String?
+  company  String?
+  website  String?
+  phone    String? // Good to have for business cards
+  jobTitle String? // Good to have
+
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
 
   @@index([userId])
 }
 
 model PromoCode {
-  id              String       @id @default(cuid())
-  name            String       // Internal name (e.g., "Summer Sale 2026")
-  code            String       @unique // The code user types (e.g., "SUMMER50")
-  type            DiscountType
-  value           Float        // e.g., 50 (for 50%) or 10000 (for IDR 10k)
-  
+  id    String       @id @default(cuid())
+  name  String // Internal name (e.g., "Summer Sale 2026")
+  code  String       @unique // The code user types (e.g., "SUMMER50")
+  type  DiscountType
+  value Float // e.g., 50 (for 50%) or 10000 (for IDR 10k)
+
   // Constraints
-  startDate       DateTime
-  endDate         DateTime
-  isActive        Boolean      @default(true)
-  
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+
   // Logic: Array of Plan IDs or Categories this applies to. 
   // Stored as JSON to allow flexibility (e.g., ["PERSONAL", "CORPORATE", "EXPANSION"])
-  applicablePlans Json?        
+  applicablePlans Json?
 
   // Analytics
-  usageCount      Int          @default(0)
-  
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  usageCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model VerificationToken {
@@ -328,5 +336,32 @@ model VerificationToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
 
+  @@index([token])
+}
+
+// Admin-sent invitation to an address that has NO account yet.
+// VerificationToken cannot serve this purpose: its userId is a required FK, so
+// it can only exist for someone who has already registered.
+model Invitation {
+  id    String @id @default(cuid())
+  email String
+
+  // Snapshot of the promo code STRING, deliberately not a relation to PromoCode.
+  // It is what the recipient types at checkout, and the record should still show
+  // what was offered even if the promo is later edited or deleted.
+  promoCode String?
+
+  invitedById String
+  invitedBy   User   @relation("SentInvitations", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  status     InvitationStatus @default(PENDING)
+  token      String           @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
   @@index([token])
 }
