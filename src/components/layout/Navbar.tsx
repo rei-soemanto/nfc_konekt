@@ -4,7 +4,12 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-export function Navbar() {
+type Props = {
+    /** Resolved on the server by the marketing layout. */
+    isLoggedIn?: boolean
+}
+
+export function Navbar({ isLoggedIn = false }: Props) {
     const [activeSection, setActiveSection] = useState('home')
     const [sliderStyle, setSliderStyle] = useState({ left: 0, width: 0, opacity: 0 })
     const [isScrolled, setIsScrolled] = useState(false) // 1. Track scroll state
@@ -98,6 +103,9 @@ export function Navbar() {
                         </Link>
                     </div>
 
+                    {/* Right side: desktop links (md+) and the auth CTA (always) */}
+                    <div className="flex items-center gap-2">
+
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center space-x-2 relative">
                         {navLinks.map((link, index) => {
@@ -136,18 +144,33 @@ export function Navbar() {
                             }} 
                         />
 
-                        <div className="pl-4">
-                            <Link 
-                                href="/auth" 
-                                className={`font-medium rounded-full hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-md shadow-indigo-700 dark:shadow-none hover:shadow-lg ${
-                                    isScrolled 
-                                        ? 'px-6 py-2.5 bg-indigo-600 text-white text-sm'  // Compact Button
-                                        : 'px-8 py-3 bg-indigo-600 text-white text-base'   // Larger Button at Top
-                                }`}
-                            >
-                                Login
-                            </Link>
-                        </div>
+                    </div>
+
+                    {/*
+                        Auth CTA — deliberately OUTSIDE the `hidden md:flex` block
+                        above, so it is the one nav control that survives on
+                        mobile. Signed-in visitors get a way back to the
+                        dashboard; previously this always said "Login", which
+                        made returning to the home page look like a logout.
+                    */}
+                    <Link
+                        href={isLoggedIn ? '/dashboard' : '/auth'}
+                        className={`shrink-0 font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-md shadow-indigo-700/30 dark:shadow-none hover:shadow-lg md:ml-2 ${
+                            isScrolled
+                                ? 'px-4 py-2 text-sm md:px-6 md:py-2.5'   // Compact Button
+                                : 'px-4 py-2 text-sm md:px-8 md:py-3 md:text-base'  // Larger Button at Top
+                        }`}
+                    >
+                        {isLoggedIn ? (
+                            <>
+                                <i className="fa-solid fa-gauge mr-2" aria-hidden="true"></i>
+                                Dashboard
+                            </>
+                        ) : (
+                            'Login'
+                        )}
+                    </Link>
+
                     </div>
                 </div>
             </div>
