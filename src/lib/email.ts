@@ -12,6 +12,13 @@ const transporter = nodemailer.createTransport({
 })
 
 /**
+ * Where operational notifications (contact-form messages, new payments) are
+ * sent. Override with ADMIN_NOTIFICATION_EMAIL if the inbox ever moves.
+ */
+export const ADMIN_NOTIFICATION_EMAIL =
+    process.env.ADMIN_NOTIFICATION_EMAIL || 'nfckonekt@gmail.com'
+
+/**
  * Escape a value before interpolating it into an HTML email body.
  *
  * NOTE: the two older templates below predate this and interpolate raw. They
@@ -234,11 +241,17 @@ export async function sendTeamMemberCredentials(params: {
  *  - escapes every interpolated value (see escapeHtml)
  *  - ships a plain-text alternative alongside the HTML, which HTML-only mail
  *    does not, and which spam filters weigh
+ *
+ * INTENTIONALLY UNATTRIBUTED: the copy speaks as NFC Konekt, never
+ * "<person> has invited you". The admin sending it is the product owner, so
+ * this is the company approaching a prospect, not a personal referral. Do not
+ * "fix" this by adding the sender's name — it is a deliberate voice choice,
+ * and it is why this function takes no inviter parameter. Who sent it is still
+ * recorded on Invitation.invitedById and shown in the admin list.
  */
 export async function sendInvitationEmail(params: {
     email: string
     inviteUrl: string
-    invitedByName: string
     /** Promo code the recipient can use at checkout, if one was attached. */
     promoCode?: string | null
     /** Human description of the offer, e.g. "50% off" or "IDR 25,000 off". */
@@ -246,9 +259,8 @@ export async function sendInvitationEmail(params: {
     /** When the invitation (and any promo) stops being usable. */
     expiresAt: Date
 }) {
-    const { email, inviteUrl, invitedByName, promoCode, promoSummary, expiresAt } = params
+    const { email, inviteUrl, promoCode, promoSummary, expiresAt } = params
 
-    const safeInviter = escapeHtml(invitedByName)
     const safeUrl = escapeHtml(inviteUrl)
     const safeCode = promoCode ? escapeHtml(promoCode) : null
     const safeSummary = promoSummary ? escapeHtml(promoSummary) : null
@@ -348,7 +360,7 @@ ${promoBlock}
     const text = [
         'You\'re invited to NFC Konekt',
         '',
-        `${invitedByName} has invited you to join NFC Konekt - a smart digital business card you share by tapping your phone.`,
+        'Join NFC Konekt - a smart digital business card you share by tapping your phone.',
         '',
         ...(promoCode
             ? [
@@ -371,6 +383,232 @@ ${promoBlock}
         from: process.env.SMTP_FROM,
         to: email,
         subject: "You're invited to join NFC Konekt",
+        text,
+        html,
+    })
+}
+
+/**
+ * Shared shell for the two internal notification emails below.
+ *
+ * Same house style as the customer-facing templates, but the body is a simple
+ * label/value table — these are read by the admin, not sold to anyone.
+ * `rows` values must already be escaped by the caller.
+ */
+function adminNoticeHtml(params: {
+    heading: string
+    intro: string
+    rows: { label: string; value: string }[]
+    body?: { label: string; value: string } | null
+    ctaLabel?: string
+    ctaUrl?: string
+}): string {
+    const { heading, intro, rows, body, ctaLabel, ctaUrl } = params
+
+    const rowsHtml = rows
+        .map(
+            (r) => `
+                                                <tr>
+                                                    <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                                                        <span style="color: #9ca3af; font-size: 13px;">${r.label}</span><br>
+                                                        <span style="color: #111827; font-size: 15px; font-weight: 600;">${r.value}</span>
+                                                    </td>
+                                                </tr>`
+        )
+        .join('')
+
+    const bodyHtml = body
+        ? `
+                                <p style="color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin: 24px 0 8px;">${body.label}</p>
+                                <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px 20px; color: #1f2937; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${body.value}</div>`
+        : ''
+
+    const ctaHtml = ctaLabel && ctaUrl
+        ? `
+                                <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 24px auto 0;">
+                                    <tr>
+                                        <td style="border-radius: 8px; background: linear-gradient(135deg, #4f46e5, #7c3aed);">
+                                            <a href="${ctaUrl}" target="_blank" style="display: inline-block; padding: 14px 40px; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600;">
+                                                ${ctaLabel}
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>`
+        : ''
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+            <tr>
+                <td align="center">
+                    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                        <!-- Header -->
+                        <tr>
+                            <td style="background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 40px 30px; text-align: center;">
+                                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">NFC Konekt</h1>
+                                <p style="color: #c7d2fe; margin: 8px 0 0; font-size: 14px;">Admin Notification</p>
+                            </td>
+                        </tr>
+                        <!-- Body -->
+                        <tr>
+                            <td style="padding: 40px 30px;">
+                                <h2 style="color: #1f2937; margin: 0 0 8px; font-size: 22px;">${heading}</h2>
+                                <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">${intro}</p>
+
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px;">
+                                    <tr>
+                                        <td style="padding: 24px 28px;">
+                                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rowsHtml}
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+${bodyHtml}${ctaHtml}
+                            </td>
+                        </tr>
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center;">
+                                <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; ${new Date().getFullYear()} NFC Konekt. All rights reserved.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    `
+}
+
+/**
+ * Deliver a public contact-form submission to the admin inbox.
+ *
+ * `replyTo` is set to the sender so the admin can answer straight from their
+ * mail client — or copy the address into Invitations to send them an offer.
+ */
+export async function sendContactMessageEmail(params: {
+    name: string
+    email: string
+    message: string
+}) {
+    const { name, email, message } = params
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nfckonekt.com'
+
+    const html = adminNoticeHtml({
+        heading: 'New message from the website',
+        intro: 'Someone submitted the contact form on the NFC Konekt landing page. Reply directly to this email to answer them.',
+        rows: [
+            { label: 'Name', value: escapeHtml(name) },
+            { label: 'Email', value: escapeHtml(email) },
+        ],
+        body: { label: 'Message', value: escapeHtml(message) },
+        ctaLabel: 'Send them an invitation',
+        ctaUrl: `${appUrl}/dashboard/admin/invites`,
+    })
+
+    // Raw values here — HTML entities would render literally in a text part.
+    const text = [
+        'New message from the website',
+        '',
+        `Name:  ${name}`,
+        `Email: ${email}`,
+        '',
+        'Message:',
+        message,
+        '',
+        `Send them an invitation: ${appUrl}/dashboard/admin/invites`,
+    ].join('\n')
+
+    await transporter.sendMail({
+        from: process.env.SMTP_FROM,
+        to: ADMIN_NOTIFICATION_EMAIL,
+        replyTo: email,
+        subject: `New contact message from ${name}`,
+        text,
+        html,
+    })
+}
+
+/**
+ * Tell the admin a payment has completed.
+ *
+ * Fired from processSuccessfulPayment, i.e. after the transaction is already
+ * recorded as PAID — see the caller, which must never let a mail failure
+ * unwind a successful payment.
+ */
+export async function sendPaymentNotificationEmail(params: {
+    customerName: string
+    customerEmail: string
+    planName: string | null
+    planDuration: string | null
+    amount: number
+    transactionType: string
+    orderId: string
+    hasShipment: boolean
+}) {
+    const {
+        customerName, customerEmail, planName, planDuration,
+        amount, transactionType, orderId, hasShipment,
+    } = params
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nfckonekt.com'
+    const formattedAmount = `IDR ${amount.toLocaleString('id-ID')}`
+
+    const durationLabels: Record<string, string> = {
+        MONTHLY: 'Monthly (30 days)',
+        SIX_MONTHS: '6 Months (180 days)',
+        YEARLY: 'Yearly (365 days)',
+    }
+    const durationLabel = planDuration ? durationLabels[planDuration] ?? planDuration : '—'
+
+    const rows = [
+        { label: 'Customer', value: escapeHtml(customerName) },
+        { label: 'Email', value: escapeHtml(customerEmail) },
+        { label: 'Plan', value: escapeHtml(planName ?? '—') },
+        { label: 'Duration', value: escapeHtml(durationLabel) },
+        { label: 'Amount', value: escapeHtml(formattedAmount) },
+        { label: 'Type', value: escapeHtml(transactionType) },
+        { label: 'Order ID', value: escapeHtml(orderId) },
+    ]
+
+    const html = adminNoticeHtml({
+        heading: 'Payment received',
+        intro: hasShipment
+            ? 'A payment has completed and a physical card is awaiting fulfilment. Update the shipment status once it is on its way.'
+            : 'A payment has completed. No physical shipment is required for this transaction.',
+        rows,
+        ctaLabel: 'Open transactions',
+        ctaUrl: `${appUrl}/dashboard/admin/transactions`,
+    })
+
+    const text = [
+        'Payment received',
+        '',
+        `Customer: ${customerName}`,
+        `Email:    ${customerEmail}`,
+        `Plan:     ${planName ?? '—'}`,
+        `Duration: ${durationLabel}`,
+        `Amount:   ${formattedAmount}`,
+        `Type:     ${transactionType}`,
+        `Order ID: ${orderId}`,
+        '',
+        hasShipment ? 'A physical card is awaiting fulfilment.' : 'No physical shipment required.',
+        '',
+        `Open transactions: ${appUrl}/dashboard/admin/transactions`,
+    ].join('\n')
+
+    await transporter.sendMail({
+        from: process.env.SMTP_FROM,
+        to: ADMIN_NOTIFICATION_EMAIL,
+        subject: `Payment received from ${customerName} — ${formattedAmount}`,
         text,
         html,
     })

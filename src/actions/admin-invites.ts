@@ -131,7 +131,6 @@ export async function getInvitations(limit = 50): Promise<InvitationRow[]> {
 async function deliverInvitation(params: {
     email: string
     inviteUrl: string
-    invitedByName: string
     promoCode: string | null
     promoSummary: string | null
     expiresAt: Date
@@ -204,11 +203,8 @@ export async function sendInvitation(data: {
         }
     }
 
-    const admin = await prisma.user.findUnique({
-        where: { id: adminId },
-        select: { fullName: true, companyName: true },
-    })
-
+    // No admin lookup here: the invitation copy never names the sender, and
+    // `invitedById` below already records who sent it.
     const token = randomBytes(32).toString('hex')
 
     try {
@@ -222,10 +218,11 @@ export async function sendInvitation(data: {
 
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/auth?invite=${token}`
 
+    // No sender name is passed: the invitation speaks as NFC Konekt by design.
+    // See the note on sendInvitationEmail.
     const delivery = await deliverInvitation({
         email,
         inviteUrl,
-        invitedByName: admin?.companyName || admin?.fullName || 'The NFC Konekt team',
         promoCode,
         promoSummary,
         expiresAt,

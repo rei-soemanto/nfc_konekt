@@ -5,7 +5,7 @@ import { coreApi } from '@/lib/midtrans'
 import { getAuthUserId } from '@/lib/auth'
 import { randomBytes } from 'crypto'
 import bcrypt from 'bcryptjs'
-import { sendTeamMemberCredentials } from '@/lib/email'
+import { sendTeamMemberCredentials, sendPaymentNotificationEmail } from '@/lib/email'
 
 // --- HELPERS ---
 
@@ -47,7 +47,10 @@ export async function processSuccessfulPayment(orderId: string) {
     }
 
     // Already processed — idempotency guard
-    if (tx.status === 'PAID') return { alreadyProcessed: true, emailFailures: [] as string[] };
+    // adminNotified is true here because the FIRST call already sent it — this
+    // path deliberately sends nothing, which is what stops a webhook retry from
+    // emailing the admin twice for one order.
+    if (tx.status === 'PAID') return { alreadyProcessed: true, emailFailures: [] as string[], adminNotified: true };
 
     // Validate BEFORE marking PAID. Every branch below dereferences tx.plan for
     // the duration, so a missing plan would otherwise throw a TypeError after
@@ -188,7 +191,38 @@ export async function processSuccessfulPayment(orderId: string) {
         }
     }
 
-    return { alreadyProcessed: false, emailFailures };
+    // D. Tell the admin a payment landed.
+    //
+    // Last thing in the function, and after the `tx.status === 'PAID'` guard at
+    // the top — so a webhook retry racing the client-side verifyPayment() path
+    // short-circuits there and this cannot send twice for one order.
+    //
+    // Never throws: the customer has already been charged and everything above
+    // has committed. A failed notification must not unwind that or surface to
+    // the payer as a failure, so it is logged and reported instead.
+    let adminNotified = true;
+    try {
+        await sendPaymentNotificationEmail({
+            customerName: tx.user.fullName,
+            customerEmail: tx.user.email,
+            // plan is optional on Transaction — EXPANSION and SHIPMENT_REQUEST
+            // rows can have none.
+            planName: tx.plan?.name ?? null,
+            planDuration: tx.plan?.duration ?? null,
+            amount: tx.amount,
+            transactionType: tx.type,
+            orderId,
+            hasShipment: Boolean(tx.shippingAddress),
+        });
+    } catch (error) {
+        adminNotified = false;
+        console.error(
+            `[processSuccessfulPayment] order ${orderId}: payment processed successfully but the admin notification email failed`,
+            error
+        );
+    }
+
+    return { alreadyProcessed: false, emailFailures, adminNotified };
 }
 
 // =============================================

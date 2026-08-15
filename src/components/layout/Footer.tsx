@@ -1,4 +1,4 @@
-import { Input } from '@/components/ui/Input'
+import ContactForm from '@/features/home/ContactForm'
 
 export function Footer() {
     return (
@@ -35,23 +35,9 @@ export function Footer() {
                     {/* Right Side: Contact Form */}
                     <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
                         <h4 className="text-lg font-semibold mb-4">Send a Message</h4>
-                        <form className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input label="Name" placeholder="Your name" className="bg-gray-700 border-gray-600 text-white placeholder-gray-400" />
-                                <Input label="Email" placeholder="your@email.com" className="bg-gray-700 border-gray-600 text-white placeholder-gray-400" />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-gray-300 mb-1 block">Message</label>
-                                <textarea 
-                                    rows={4} 
-                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none"
-                                    placeholder="How can we help?"
-                                />
-                            </div>
-                            <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-lg transition-colors">
-                                Send Message
-                            </button>
-                        </form>
+                        {/* Client component: the form itself is interactive, but
+                            the rest of the footer stays a Server Component. */}
+                        <ContactForm />
                     </div>
                 </div>
                 
